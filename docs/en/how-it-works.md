@@ -16,7 +16,7 @@ nothing to install beyond `bash`.
 | Agent | File | Note |
 |---|---|---|
 | Claude Code | `CLAUDE.md` | plain copy |
-| Cursor | `.cursor/rules/pstack.mdc` | prefixed with `alwaysApply: true` frontmatter |
+| Cursor | `.cursor/rules/stack-agents.mdc` | prefixed with `alwaysApply: true` frontmatter |
 | Cline | `.clinerules` | plain copy |
 | Roo Code | `.roorules` | plain copy |
 | Windsurf | `.windsurfrules` | plain copy |
@@ -67,7 +67,7 @@ guarantee.
 - `scripts/install.sh` copies the repository into a project: `AGENTS.md`, `.ai/`,
   `scripts/` and `VERSION`. It is a one-time act, and it refuses to overwrite by
   default. `--force` updates an existing install and reports the version change;
-  `--uninstall` removes what pstack manages and keeps the project's own files.
+  `--uninstall` removes what stack-agents manages and keeps the project's own files.
 - `scripts/sync.sh` runs inside a project and derives the per-agent files from
   `AGENTS.md`. It runs after every edit to `AGENTS.md`, and in CI.
 

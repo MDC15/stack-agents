@@ -26,7 +26,7 @@ banner='<!-- Generated from AGENTS.md by scripts/sync.sh. Edit AGENTS.md, not th
 
 { printf '%s\n\n' "$banner"; cat "$src"; } > "$tmp/plain.md"
 {
-  printf -- '---\ndescription: pstack-universal operating rules\nalwaysApply: true\n---\n\n'
+  printf -- '---\ndescription: stack-agents operating rules\nalwaysApply: true\n---\n\n'
   cat "$tmp/plain.md"
 } > "$tmp/cursor.mdc"
 
@@ -53,7 +53,7 @@ place .clinerules                      "$tmp/plain.md"
 place .roorules                        "$tmp/plain.md"
 place .windsurfrules                   "$tmp/plain.md"
 place .github/copilot-instructions.md  "$tmp/plain.md"
-place .cursor/rules/pstack.mdc         "$tmp/cursor.mdc"
+place .cursor/rules/stack-agents.mdc         "$tmp/cursor.mdc"
 
 (( check && status == 0 )) && echo "all generated files are up to date"
 exit "$status"

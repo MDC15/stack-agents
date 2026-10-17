@@ -1,4 +1,4 @@
-# pstack-universal task runner.
+# stack-agents task runner.
 #   make                        show this help
 #   make check                  generated-file drift check, then the test suite
 #   make sync                   regenerate the per-agent rule files from AGENTS.md
@@ -9,7 +9,7 @@
 .PHONY: help check test sync diff install
 
 help:
-	@echo "pstack-universal"
+	@echo "stack-agents"
 	@echo "  make check                  check generated files, then run tests"
 	@echo "  make sync                   regenerate agent rule files from AGENTS.md"
 	@echo "  make diff                   show the difference for each stale file"

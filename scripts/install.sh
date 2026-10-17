@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Install pstack-universal into a project so nothing has to be copied by hand.
+# Install stack-agents into a project so nothing has to be copied by hand.
 # Usage: bash scripts/install.sh [options] <target-dir>
 #
 # Options:
 #   --force      merge the current AGENTS.md, .ai/, scripts/ and VERSION into the target
 #   --dry-run    print what would happen, change nothing
 #   --no-sync    install files but do not generate agent config files
-#   --uninstall  remove pstack-managed files from the target, keep everything else
+#   --uninstall  remove stack-agents-managed files from the target, keep everything else
 #   --version    print the version of this checkout and exit
 #   -h, --help   show this help
 #
@@ -28,15 +28,15 @@ usage() {
   awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "${BASH_SOURCE[0]}"
 }
 
-# Remove only what pstack installed: generated rule files still carrying the
-# banner, the pstack scripts, the files this source checkout ships under .ai/
+# Remove only what stack-agents installed: generated rule files still carrying the
+# banner, the stack-agents scripts, the files this source checkout ships under .ai/
 # and the skills it ships, and VERSION. The project's own files -- AGENTS.md
 # with its Project overrides, .ai/conventions.md, custom skills -- are kept.
 uninstall_target() {
   local dir="$1" removed=0 item name src_file
   local banner='Generated from AGENTS.md by scripts/sync.sh'
   # The Cursor file carries frontmatter before its banner, hence head -n 8.
-  local generated=(CLAUDE.md .clinerules .roorules .windsurfrules .github/copilot-instructions.md .cursor/rules/pstack.mdc)
+  local generated=(CLAUDE.md .clinerules .roorules .windsurfrules .github/copilot-instructions.md .cursor/rules/stack-agents.mdc)
   local shipped=(sync.sh install.sh test.sh load_skill.py)
 
   [[ -d "$dir" ]] || { echo "not a directory: $dir" >&2; return 1; }
@@ -98,13 +98,13 @@ uninstall_target() {
     return 0
   fi
   if ((dry)); then
-    echo "would remove $removed pstack-managed files from $dir"
+    echo "would remove $removed stack-agents-managed files from $dir"
   else
-    echo "removed $removed pstack-managed files from $dir"
+    echo "removed $removed stack-agents-managed files from $dir"
   fi
   cat <<EOF
 Kept on purpose: AGENTS.md (it holds this project's Project overrides),
-.ai/conventions.md, and any file pstack did not ship. Remove them by hand if
+.ai/conventions.md, and any file stack-agents did not ship. Remove them by hand if
 you no longer want them.
 EOF
 }
@@ -115,7 +115,7 @@ while (($#)); do
     --dry-run) dry=1 ;;
     --no-sync) run_sync=0 ;;
     --uninstall) uninstall_mode=1 ;;
-    --version) echo "pstack-universal $(cat "$source_root/VERSION")"; exit 0 ;;
+    --version) echo "stack-agents $(cat "$source_root/VERSION")"; exit 0 ;;
     -h|--help) usage; exit 0 ;;
     -*) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
     *) target="$1" ;;
@@ -185,12 +185,12 @@ fi
 
 new_version="$(cat "$source_root/VERSION")"
 if [[ -n "$old_version" && "$old_version" != "$new_version" ]]; then
-  echo "updated pstack-universal $old_version -> $new_version"
+  echo "updated stack-agents $old_version -> $new_version"
 fi
 
 cat <<EOF
 
-pstack-universal v$new_version installed in $target
+stack-agents v$new_version installed in $target
 Next: fill in the build, test and lint commands under "Project overrides" in
 $target/AGENTS.md, then re-run sync.sh if you edit AGENTS.md.
 EOF

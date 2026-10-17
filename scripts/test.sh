@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Self-check for pstack-universal.
+# Self-check for stack-agents.
 #   bash scripts/test.sh     exit 0 = every case passed
 # Covers: install.sh behaviour, load_skill.py CLI, Markdown link integrity.
 set -uo pipefail
@@ -95,7 +95,7 @@ want_rc 2 "install: unknown flag is a usage error"
 
 run "$root/scripts/install.sh" --version
 want_rc 0 "install: --version succeeds"
-want_out "pstack-universal $(cat "$root/VERSION")" "install: --version reports this checkout's version"
+want_out "stack-agents $(cat "$root/VERSION")" "install: --version reports this checkout's version"
 
 # --- sync.sh ---------------------------------------------------------------
 cp -R "$root" "$tmp/syncsrc"
@@ -118,14 +118,14 @@ want_rc 0 "sync: --check passes again after a sync"
 run bash -c "cd '$tmp/syncsrc' && bash scripts/sync.sh --nope"
 want_rc 2 "sync: unknown flag is a usage error"
 
-if grep -q '^alwaysApply: true$' "$tmp/syncsrc/.cursor/rules/pstack.mdc"; then
+if grep -q '^alwaysApply: true$' "$tmp/syncsrc/.cursor/rules/stack-agents.mdc"; then
   ok "sync: cursor file keeps the alwaysApply frontmatter"
 else
   no "sync: cursor file keeps the alwaysApply frontmatter"
 fi
 
 banner_missing=0
-for f in CLAUDE.md .clinerules .roorules .windsurfrules .github/copilot-instructions.md .cursor/rules/pstack.mdc; do
+for f in CLAUDE.md .clinerules .roorules .windsurfrules .github/copilot-instructions.md .cursor/rules/stack-agents.mdc; do
   grep -q 'Generated from AGENTS.md' "$tmp/syncsrc/$f" || banner_missing=1
 done
 if ((banner_missing == 0)); then

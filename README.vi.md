@@ -1,4 +1,4 @@
-# pstack-universal
+# stack-agents
 
 Bộ quy tắc và quy trình làm việc dạng Markdown, dùng được với mọi AI coding
 agent: Claude Code, Cursor, Codex, Cline, Roo Code, Windsurf, GitHub Copilot,
@@ -58,7 +58,7 @@ Makefile                   # make check | sync | diff | test | install
 Một lệnh, không copy tay:
 
 ```bash
-bash /đường/dẫn/tới/pstack-universal/scripts/install.sh /đường/dẫn/tới/dự-án
+bash /đường/dẫn/tới/stack-agents/scripts/install.sh /đường/dẫn/tới/dự-án
 ```
 
 Script chép `AGENTS.md`, `.ai/`, `scripts/` và `VERSION` vào dự án rồi chạy
@@ -70,7 +70,7 @@ cuối `AGENTS.md`.
 | `--force` | Gộp `AGENTS.md`, `.ai/`, `scripts/` và `VERSION` hiện tại đè lên bản trong dự án, rồi chạy lại sync. Đây là cách cập nhật; script sẽ in phiên bản cũ và mới |
 | `--dry-run` | In ra việc sẽ làm, không thay đổi gì |
 | `--no-sync` | Chỉ chép file, không sinh file quy tắc cho agent |
-| `--uninstall` | Gỡ những gì pstack đã cài (file sinh ra, script, kỹ năng kèm theo), giữ lại file của dự án. Kết hợp được với `--dry-run` |
+| `--uninstall` | Gỡ những gì stack-agents đã cài (file sinh ra, script, kỹ năng kèm theo), giữ lại file của dự án. Kết hợp được với `--dry-run` |
 | `--version` | In phiên bản của bản checkout rồi thoát |
 
 Không có `--force`, script từ chối đụng vào bản cài đã có, nên không thể phá
@@ -82,10 +82,10 @@ nên vẫn còn sau khi cập nhật.
 > `--force` sẽ thay chúng. Hãy tự tạo `.ai/skills/<tên>.md`; file thừa không bao
 > giờ bị cập nhật hay gỡ bỏ đụng tới.
 
-Để gỡ pstack khỏi một dự án:
+Để gỡ stack-agents khỏi một dự án:
 
 ```bash
-bash /đường/dẫn/tới/pstack-universal/scripts/install.sh --uninstall /đường/dẫn/tới/dự-án
+bash /đường/dẫn/tới/stack-agents/scripts/install.sh --uninstall /đường/dẫn/tới/dự-án
 ```
 
 <details>
@@ -104,7 +104,7 @@ Hướng dẫn đầy đủ: [docs/vi/getting-started.md](docs/vi/getting-starte
 | Agent | File agent đọc |
 |---|---|
 | Claude Code | `CLAUDE.md` |
-| Cursor | `.cursor/rules/pstack.mdc` (luôn bật) |
+| Cursor | `.cursor/rules/stack-agents.mdc` (luôn bật) |
 | Cline | `.clinerules` |
 | Roo Code | `.roorules` |
 | Windsurf | `.windsurfrules` |

@@ -1,6 +1,6 @@
 <!-- Generated from AGENTS.md by scripts/sync.sh. Edit AGENTS.md, not this file. -->
 
-# pstack-universal
+# stack-agents
 
 Reply in the user's language. Code, identifiers and commit messages stay in English unless the repo says otherwise.
 

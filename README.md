@@ -1,4 +1,4 @@
-# pstack-universal
+# stack-agents
 
 A set of Markdown rules and workflows that works with any AI coding agent:
 Claude Code, Cursor, Codex, Cline, Roo Code, Windsurf, GitHub Copilot, or an
@@ -58,7 +58,7 @@ Makefile                   # make check | sync | diff | test | install
 One command, no manual copying:
 
 ```bash
-bash /path/to/pstack-universal/scripts/install.sh /path/to/your-project
+bash /path/to/stack-agents/scripts/install.sh /path/to/your-project
 ```
 
 It copies `AGENTS.md`, `.ai/`, `scripts/` and `VERSION` into the project and
@@ -70,7 +70,7 @@ runs `sync.sh` there. Then fill in the build, test and lint commands under
 | `--force` | Merge the current `AGENTS.md`, `.ai/`, `scripts/` and `VERSION` over the target, then re-run the sync. This is the update path; it prints the old and new version |
 | `--dry-run` | Print what would happen, change nothing |
 | `--no-sync` | Copy the files but do not generate the agent rule files |
-| `--uninstall` | Remove what pstack installed (generated files, scripts, shipped skills), keeping the project's own files. Honours `--dry-run` |
+| `--uninstall` | Remove what stack-agents installed (generated files, scripts, shipped skills), keeping the project's own files. Honours `--dry-run` |
 | `--version` | Print the version of the checkout and exit |
 
 Without `--force`, the script refuses to touch an existing install, so it cannot
@@ -82,10 +82,10 @@ the source, so they survive an update.
 > `--force` update replaces them. Add your own `.ai/skills/<name>.md` instead;
 > extra files are never touched by an update or an uninstall.
 
-To remove pstack from a project:
+To remove stack-agents from a project:
 
 ```bash
-bash /path/to/pstack-universal/scripts/install.sh --uninstall /path/to/your-project
+bash /path/to/stack-agents/scripts/install.sh --uninstall /path/to/your-project
 ```
 
 <details>
@@ -105,7 +105,7 @@ Full walkthrough: [docs/en/getting-started.md](docs/en/getting-started.md).
 | Agent | File it reads |
 |---|---|
 | Claude Code | `CLAUDE.md` |
-| Cursor | `.cursor/rules/pstack.mdc` (always applied) |
+| Cursor | `.cursor/rules/stack-agents.mdc` (always applied) |
 | Cline | `.clinerules` |
 | Roo Code | `.roorules` |
 | Windsurf | `.windsurfrules` |

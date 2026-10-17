@@ -4,7 +4,7 @@
 
 `AGENTS.md` is the single source of truth. Edit it, never the files it
 generates: `CLAUDE.md`, `.clinerules`, `.roorules`, `.windsurfrules`,
-`.cursor/rules/pstack.mdc`, `.github/copilot-instructions.md`. After every
+`.cursor/rules/stack-agents.mdc`, `.github/copilot-instructions.md`. After every
 edit:
 
 ```bash
@@ -26,7 +26,7 @@ Full walkthrough: [docs/en/extending.md](docs/en/extending.md).
 ## Versioning
 
 Bump `VERSION` and add a `CHANGELOG.md` entry when a change reaches someone
-installing or extending pstack-universal. Fixes to prose alone need neither.
+installing or extending stack-agents. Fixes to prose alone need neither.
 
 ## Documentation
 

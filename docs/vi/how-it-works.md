@@ -16,7 +16,7 @@ ngoài `bash`.
 | Agent | File | Ghi chú |
 |---|---|---|
 | Claude Code | `CLAUDE.md` | chép nguyên văn |
-| Cursor | `.cursor/rules/pstack.mdc` | thêm frontmatter `alwaysApply: true` ở đầu |
+| Cursor | `.cursor/rules/stack-agents.mdc` | thêm frontmatter `alwaysApply: true` ở đầu |
 | Cline | `.clinerules` | chép nguyên văn |
 | Roo Code | `.roorules` | chép nguyên văn |
 | Windsurf | `.windsurfrules` | chép nguyên văn |
@@ -64,7 +64,7 @@ là những luật quan trọng nhất, và cũng là những luật cần đư�
 - `scripts/install.sh` chép repo vào một dự án: `AGENTS.md`, `.ai/`, `scripts/`
   và `VERSION`. Đây là việc làm một lần, và mặc định nó từ chối ghi đè.
   `--force` cập nhật bản cài sẵn có và báo thay đổi phiên bản; `--uninstall` gỡ
-  phần do pstack quản lý và giữ lại file của dự án.
+  phần do stack-agents quản lý và giữ lại file của dự án.
 - `scripts/sync.sh` chạy bên trong một dự án và sinh file cho từng agent từ
   `AGENTS.md`. Nó chạy sau mỗi lần sửa `AGENTS.md`, và chạy trong CI.
 
