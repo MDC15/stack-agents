@@ -15,5 +15,15 @@ jobs:
         run: |
           pip install --quiet ruff
           ruff check scripts/load_skill.py
+      - name: Scripts are executable
+        run: |
+          not_executable="$(git ls-files -s 'scripts/*.sh' | awk '$1 != "100755" { print $4 }')"
+          if [ -n "$not_executable" ]; then
+            echo "these scripts are committed without the executable bit, so a fresh"
+            echo "checkout cannot run them (test.sh invokes install.sh directly):"
+            echo "$not_executable"
+            echo "fix with: git update-index --chmod=+x <file>"
+            exit 1
+          fi
       - name: Tests and generated-file drift check
         run: make check
