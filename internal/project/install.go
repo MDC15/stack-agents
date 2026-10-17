@@ -24,9 +24,10 @@ var installRoot = []string{"AGENTS.md", "VERSION", ".ai", "scripts"}
 // no VERSION: that is a project adopting stack, whose AGENTS.md is kept
 // as-is and becomes the source of truth for Sync. With force, an
 // existing AGENTS.md is merged instead: everything before its
-// "## Project overrides" heading is replaced by the upstream body and
-// the project's tail from that heading on is kept; a missing heading
-// means a full overwrite and a returned warning line.
+// "## Project overrides" heading is replaced by upstream truncated at
+// its own overrides heading — one overrides section in the result —
+// and the project's tail from that heading on is kept; a missing
+// heading means a full overwrite and a returned warning line.
 func (p *Project) Install(assets fs.FS, force bool, plan map[string]bool) ([]string, error) {
 	var present []string
 	presence := make(map[string]bool, len(installRoot))
@@ -100,8 +101,10 @@ func (p *Project) Install(assets fs.FS, force bool, plan map[string]bool) ([]str
 
 // mergeAGENTS replaces the project's AGENTS.md up to (not including)
 // its overrides heading with upstream, keeping the project's overrides.
-// It returns a warning when the heading is missing and the file was
-// replaced entirely.
+// Upstream is truncated at its own overrides heading first, so the
+// merged file holds exactly one such section: upstream's rules plus the
+// project's overrides. It returns a warning when the target's heading
+// is missing and the file was replaced entirely.
 func (p *Project) mergeAGENTS(upstream []byte) (string, error) {
 	path := filepath.Join(p.Root, "AGENTS.md")
 	target, err := os.ReadFile(path)
@@ -115,7 +118,11 @@ func (p *Project) mergeAGENTS(upstream []byte) (string, error) {
 		}
 		return fmt.Sprintf("AGENTS.md: no %q heading, replaced with upstream", overridesHeading), nil
 	}
-	merged := bytes.Clone(upstream)
+	base := upstream
+	if off, ok := overridesOffset(upstream); ok {
+		base = upstream[:off]
+	}
+	merged := bytes.Clone(base)
 	if len(merged) > 0 && merged[len(merged)-1] != '\n' {
 		merged = append(merged, '\n')
 	}

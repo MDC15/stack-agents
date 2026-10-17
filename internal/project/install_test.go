@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/MDC15/stack-agents"
 	"github.com/MDC15/stack-agents/internal/generate"
@@ -101,21 +102,32 @@ func TestInstallAdoptsExistingAGENTS(t *testing.T) {
 }
 
 func TestForceKeepsOverrides(t *testing.T) {
-	upstream, err := fs.ReadFile(stackagents.Assets, "AGENTS.md")
+	embedded, err := fs.ReadFile(stackagents.Assets, "AGENTS.md")
 	if err != nil {
 		t.Fatal(err)
 	}
+	rules := rulesBefore(embedded)
+
+	// The project's file: rules as an older install shipped them, plus
+	// the project's own overrides section.
 	root := t.TempDir()
-	target := append(bytes.Clone(upstream), []byte("\n## Project overrides\n\nTest: custom-cmd\n")...)
+	target := bytes.Clone(rules)
+	target = append(target, []byte("## Project overrides\n\nTest: custom-cmd\n")...)
 	if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), target, 0o644); err != nil {
 		t.Fatal(err)
 	}
+
+	// Upstream has since changed: a new marker line in the rules body,
+	// its own overrides section still following it.
+	changed := bytes.Clone(rules)
+	changed = append(changed, []byte("# upstream revision 2\n\n")...)
+	changed = append(changed, embedded[len(rules):]...)
+
 	p, err := Open(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if _, err := p.Install(stackagents.Assets, true, nil); err != nil {
+	if _, err := p.Install(changedUpstream(t, changed), true, nil); err != nil {
 		t.Fatalf("Install(force): %v", err)
 	}
 
@@ -123,12 +135,63 @@ func TestForceKeepsOverrides(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.HasPrefix(got, upstream) {
-		t.Errorf("AGENTS.md = %q, want it to start with the new upstream body", got)
+	text := string(got)
+	if !strings.Contains(text, "# upstream revision 2") {
+		t.Errorf("AGENTS.md = %q, want the new upstream rules body", got)
 	}
-	if !bytes.Contains(got, []byte("Test: custom-cmd")) {
+	if strings.Contains(text, "Repo-specific commands") {
+		t.Errorf("AGENTS.md = %q, want upstream's own overrides section truncated", got)
+	}
+	if !strings.Contains(text, "Test: custom-cmd") {
 		t.Errorf("AGENTS.md = %q, want the project's overrides kept", got)
 	}
+
+	const heading = "## Project overrides"
+	count := 0
+	for _, line := range strings.Split(text, "\n") {
+		if strings.TrimSpace(line) == heading {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("AGENTS.md has %d %q lines, want exactly 1:\n%s", count, heading, got)
+	}
+	if i := strings.Index(text, heading); i < 0 || !strings.Contains(text[i:], "Test: custom-cmd") {
+		t.Errorf("AGENTS.md = %q, want %q under the overrides heading", got, "Test: custom-cmd")
+	}
+}
+
+// rulesBefore returns content up to (not including) its first overrides
+// heading line, or all of it when the heading is missing.
+func rulesBefore(content []byte) []byte {
+	offset := 0
+	for _, line := range bytes.Split(content, []byte("\n")) {
+		if strings.TrimSpace(string(line)) == "## Project overrides" {
+			return content[:offset]
+		}
+		offset += len(line) + 1
+	}
+	return content
+}
+
+// changedUpstream returns the embedded assets with AGENTS.md replaced
+// by the given body, simulating an upstream that changed since install.
+func changedUpstream(t *testing.T, agentsMD []byte) fs.FS {
+	t.Helper()
+	return overlayFS{FS: stackagents.Assets, files: map[string][]byte{"AGENTS.md": agentsMD}}
+}
+
+// overlayFS serves the embedded assets, overriding named files.
+type overlayFS struct {
+	fs.FS
+	files map[string][]byte
+}
+
+func (o overlayFS) Open(name string) (fs.File, error) {
+	if data, ok := o.files[name]; ok {
+		return fstest.MapFS{name: &fstest.MapFile{Data: data}}.Open(name)
+	}
+	return o.FS.Open(name)
 }
 
 func TestForceWithoutHeadingOverwrites(t *testing.T) {
