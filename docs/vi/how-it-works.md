@@ -28,7 +28,8 @@ frontmatter YAML để quy tắc được nạp mà không cần gọi.
 
 `scripts/sync.sh --check` so từng file sinh ra với nội dung mà sync sẽ ghi, và
 thoát khác 0 kèm tên file nếu có file lệch. CI chạy lệnh này, đó là thứ giữ sáu
-file không trôi khỏi nhau.
+file không trôi khỏi nhau. `--diff` làm tương tự nhưng còn in phần khác biệt của
+từng file lệch, để thấy rõ thay đổi chứ không chỉ thấy tên file.
 
 Nếu một công cụ tìm ở chỗ khác — các đường dẫn này thay đổi theo phiên bản — sửa
 danh sách `place` ở cuối `scripts/sync.sh`. Phần còn lại của script không cần
@@ -60,8 +61,10 @@ là những luật quan trọng nhất, và cũng là những luật cần đư�
 
 ## Cài và sync là hai việc tách biệt
 
-- `scripts/install.sh` chép repo vào một dự án: `AGENTS.md`, `.ai/` và
-  `scripts/`. Đây là việc làm một lần, và mặc định nó từ chối ghi đè.
+- `scripts/install.sh` chép repo vào một dự án: `AGENTS.md`, `.ai/`, `scripts/`
+  và `VERSION`. Đây là việc làm một lần, và mặc định nó từ chối ghi đè.
+  `--force` cập nhật bản cài sẵn có và báo thay đổi phiên bản; `--uninstall` gỡ
+  phần do pstack quản lý và giữ lại file của dự án.
 - `scripts/sync.sh` chạy bên trong một dự án và sinh file cho từng agent từ
   `AGENTS.md`. Nó chạy sau mỗi lần sửa `AGENTS.md`, và chạy trong CI.
 

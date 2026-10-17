@@ -25,6 +25,7 @@ More: [docs/en/how-it-works.md](docs/en/how-it-works.md).
 
 ```
 AGENTS.md                  # Single source of truth: loop, skill table, hard rules
+VERSION                    # Current version; copied into every install
 .ai/
 ├── principles.md          # 16 engineering principles (read for non-trivial work)
 ├── skills/                # Invoked as /...
@@ -40,14 +41,16 @@ AGENTS.md                  # Single source of truth: loop, skill table, hard rul
     ├── debug.md           # Includes a production-incident branch
     └── refactor.md
 scripts/
-├── install.sh             # Install into a project with one command
+├── install.sh             # Install, update or uninstall with one command
 ├── sync.sh                # Generate each agent's rule file from AGENTS.md
-├── test.sh                # Self-check: install.sh, load_skill.py, links
+├── test.sh                # Self-check: install.sh, sync.sh, load_skill.py, links
 └── load_skill.py          # Loader for custom agents
 docs/
 ├── en/                    # Canonical documentation (English)
 └── vi/                    # Vietnamese translation of docs/en
-Makefile                   # make check | sync | test | install
+CHANGELOG.md               # What changed, per version
+CONTRIBUTING.md            # Workflow and pull-request checklist
+Makefile                   # make check | sync | diff | test | install
 ```
 
 ## Install
@@ -58,20 +61,32 @@ One command, no manual copying:
 bash /path/to/pstack-universal/scripts/install.sh /path/to/your-project
 ```
 
-It copies `AGENTS.md`, `.ai/` and `scripts/` into the project and runs
-`sync.sh` there. Then fill in the build, test and lint commands under
+It copies `AGENTS.md`, `.ai/`, `scripts/` and `VERSION` into the project and
+runs `sync.sh` there. Then fill in the build, test and lint commands under
 **Project overrides** at the end of `AGENTS.md`.
 
 | Option | Effect |
 |---|---|
-| `--force` | Merge the current `AGENTS.md`, `.ai/` and `scripts/` over the target, then re-run the sync. This is the update path |
+| `--force` | Merge the current `AGENTS.md`, `.ai/`, `scripts/` and `VERSION` over the target, then re-run the sync. This is the update path; it prints the old and new version |
 | `--dry-run` | Print what would happen, change nothing |
 | `--no-sync` | Copy the files but do not generate the agent rule files |
+| `--uninstall` | Remove what pstack installed (generated files, scripts, shipped skills), keeping the project's own files. Honours `--dry-run` |
+| `--version` | Print the version of the checkout and exit |
 
 Without `--force`, the script refuses to touch an existing install, so it cannot
 destroy work by accident. A merge replaces files the source contains and leaves
-the rest alone; `.ai/conventions.md` is not part of the source, so it survives an
-update.
+the rest alone; `.ai/conventions.md` and any skill you added yourself are not in
+the source, so they survive an update.
+
+> **Do not edit the shipped skill files** in an installed project — a
+> `--force` update replaces them. Add your own `.ai/skills/<name>.md` instead;
+> extra files are never touched by an update or an uninstall.
+
+To remove pstack from a project:
+
+```bash
+bash /path/to/pstack-universal/scripts/install.sh --uninstall /path/to/your-project
+```
 
 <details>
 <summary>Manual install, if the script does not fit your setup</summary>
@@ -100,8 +115,10 @@ Full walkthrough: [docs/en/getting-started.md](docs/en/getting-started.md).
 Tool versions change these paths. If your agent looks somewhere else, edit the
 `place` list in `scripts/sync.sh`.
 
-After every edit to `AGENTS.md`, run `sync.sh` again. In CI, run
-`bash scripts/sync.sh --check` to fail when a generated file has drifted.
+After every edit to `AGENTS.md`, run `sync.sh` again. To see what a sync would
+change without writing, run `bash scripts/sync.sh --diff` (or `make diff`).
+In CI, run `bash scripts/sync.sh --check` to fail when a generated file has
+drifted.
 
 ## Commands
 
@@ -152,8 +169,16 @@ make check     # generated-file drift check, then the test suite
 ```
 
 `make check` runs `scripts/sync.sh --check` and `scripts/test.sh`. The test
-suite covers `install.sh` behaviour, the `load_skill.py` CLI, and that every
-relative link in the documentation resolves. CI runs the same command.
+suite covers `install.sh` behaviour, `sync.sh` drift detection, the
+`load_skill.py` CLI, that every relative link in the documentation resolves,
+and that `docs/en` and `docs/vi` stay in step. CI runs the same command, plus
+ShellCheck over the shell scripts and Ruff over the Python loader.
+
+## Contributing
+
+Workflow, versioning and the pull-request checklist:
+[CONTRIBUTING.md](CONTRIBUTING.md). What changed recently:
+[CHANGELOG.md](CHANGELOG.md).
 
 ## Limitations
 

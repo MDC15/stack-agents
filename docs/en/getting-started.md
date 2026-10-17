@@ -23,14 +23,33 @@ It copies `AGENTS.md`, `.ai/` and `scripts/` into the project and runs
 
 | Option | Effect |
 |---|---|
-| `--force` | Merge the source `AGENTS.md`, `.ai/` and `scripts/` over the target's, then re-run the sync |
+| `--force` | Merge the source `AGENTS.md`, `.ai/`, `scripts/` and `VERSION` over the target's, then re-run the sync. Prints the old and new version |
 | `--dry-run` | Print what would happen, change nothing |
 | `--no-sync` | Copy the files but skip generating the agent rule files |
+| `--uninstall` | Remove what pstack installed, keeping the project's own files |
+| `--version` | Print the version of the source checkout and exit |
 
 Without `--force` the script refuses to touch an existing install, so a second
 run against the same project is safe and does nothing. With `--force` the source
 files replace their counterparts and everything else is left alone;
-`.ai/conventions.md` is not in the source, so it survives the update.
+`.ai/conventions.md` and any skill you added yourself are not in the source, so
+they survive the update.
+
+> **Do not edit the shipped skill files** in `.ai/skills/` and `.ai/playbooks/`
+> — a `--force` update replaces them. Add your own `.ai/skills/<name>.md`
+> instead; extra files survive updates and uninstalls untouched.
+
+To remove pstack from the project again:
+
+```bash
+bash /path/to/pstack-universal/scripts/install.sh --uninstall /path/to/your-project
+```
+
+It removes the generated rule files (only those still carrying the source
+banner), the pstack scripts and the skills this repository ships. `AGENTS.md`,
+`.ai/conventions.md` and custom skills are kept, since they hold the project's
+own configuration; delete those by hand if you no longer want them. Combine it
+with `--dry-run` to see the list first.
 
 <details>
 <summary>Manual install</summary>
@@ -68,6 +87,7 @@ To check without writing — in CI, for example:
 
 ```bash
 bash scripts/sync.sh --check     # exits 1 and names any stale file
+bash scripts/sync.sh --diff      # same, and prints the difference for each
 ```
 
 ## Verify the install
@@ -76,8 +96,10 @@ bash scripts/sync.sh --check     # exits 1 and names any stale file
 bash scripts/test.sh
 ```
 
-It covers `install.sh` behaviour and the `load_skill.py` CLI. An installed
-project has no `docs/`, so the link check is skipped there rather than failed.
+It covers `install.sh` behaviour, `sync.sh` drift detection, the
+`load_skill.py` CLI, and the bilingual parity of `docs/`. An installed
+project has no `docs/`, so the documentation checks are skipped there rather
+than failed.
 
 When you are working in the pstack-universal repository itself, `make check` runs
 the same suite plus the generated-file drift check.

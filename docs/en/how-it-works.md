@@ -28,7 +28,9 @@ adds YAML frontmatter so the rule loads without being requested.
 
 `scripts/sync.sh --check` compares each generated file against what the sync
 would write, and exits non-zero naming any that differ. CI runs it, which is
-what stops the six files from drifting apart.
+what stops the six files from drifting apart. `--diff` does the same but also
+prints the difference for each stale file, so drift is visible and not just
+named.
 
 If a tool looks somewhere else — these paths change between versions — edit the
 `place` list at the bottom of `scripts/sync.sh`. The rest of the script does not
@@ -62,8 +64,10 @@ guarantee.
 
 ## Install and sync are separate
 
-- `scripts/install.sh` copies the repository into a project: `AGENTS.md`, `.ai/`
-  and `scripts/`. It is a one-time act, and it refuses to overwrite by default.
+- `scripts/install.sh` copies the repository into a project: `AGENTS.md`, `.ai/`,
+  `scripts/` and `VERSION`. It is a one-time act, and it refuses to overwrite by
+  default. `--force` updates an existing install and reports the version change;
+  `--uninstall` removes what pstack manages and keeps the project's own files.
 - `scripts/sync.sh` runs inside a project and derives the per-agent files from
   `AGENTS.md`. It runs after every edit to `AGENTS.md`, and in CI.
 

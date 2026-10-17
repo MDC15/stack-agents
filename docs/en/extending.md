@@ -38,8 +38,9 @@ make check
 ```
 
 That runs `scripts/sync.sh --check` and `scripts/test.sh`. The test suite checks
-`install.sh`, the `load_skill.py` CLI, and that every relative link in the
-documentation resolves. If you added a skill, confirm it shows up:
+`install.sh`, `sync.sh`, the `load_skill.py` CLI, that every relative link in
+the documentation resolves, and that `docs/en` and `docs/vi` stay in step. If
+you added a skill, confirm it shows up:
 
 ```bash
 python3 -I scripts/load_skill.py list
@@ -48,16 +49,18 @@ python3 -I scripts/load_skill.py list
 ## Keep the translations in step
 
 Documentation exists twice — `docs/en/` and `docs/vi/`, with identical filenames.
-If you change one, change its counterpart in the same commit. The link check in
-`scripts/test.sh` catches a broken path, but not a stale translation, so treat
-them as one change.
+If you change one, change its counterpart in the same commit. `scripts/test.sh`
+fails when a file exists on one side only, or when the two versions of a file
+carry different numbers of headings — both signs of a translation left behind.
+Only stale prose slips through, so treat the two files as one change.
 
 `AGENTS.md` and `.ai/` are deliberately English-only: they are loaded into the
 model's context every session, and a second copy would double that cost.
 
 ## Contribute
 
-Before opening a pull request:
+The full checklist lives in [../../CONTRIBUTING.md](../../CONTRIBUTING.md).
+For extending specifically:
 
 1. `make check` passes.
 2. `AGENTS.md` and the generated files are in sync — CI fails otherwise.

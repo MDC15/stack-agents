@@ -25,6 +25,7 @@ Chi tiết: [docs/vi/how-it-works.md](docs/vi/how-it-works.md).
 
 ```
 AGENTS.md                  # Nguồn sự thật: vòng làm việc, bảng kỹ năng, luật cứng
+VERSION                    # Phiên bản hiện tại; được chép vào mọi bản cài
 .ai/
 ├── principles.md          # 16 nguyên tắc kỹ thuật (đọc khi làm việc không tầm thường)
 ├── skills/                # Gọi bằng lệnh /...
@@ -40,14 +41,16 @@ AGENTS.md                  # Nguồn sự thật: vòng làm việc, bảng kỹ
     ├── debug.md           # Gồm nhánh xử lý sự cố production
     └── refactor.md
 scripts/
-├── install.sh             # Cài vào một dự án bằng một lệnh
+├── install.sh             # Cài, cập nhật hoặc gỡ bằng một lệnh
 ├── sync.sh                # Sinh file quy tắc cho từng agent từ AGENTS.md
-├── test.sh                # Tự kiểm: install.sh, load_skill.py, liên kết
+├── test.sh                # Tự kiểm: install.sh, sync.sh, load_skill.py, liên kết
 └── load_skill.py          # Bộ nạp cho agent tự viết
 docs/
 ├── en/                    # Tài liệu gốc (tiếng Anh)
 └── vi/                    # Bản dịch tiếng Việt của docs/en
-Makefile                   # make check | sync | test | install
+CHANGELOG.md               # Thay đổi theo từng phiên bản
+CONTRIBUTING.md            # Quy trình đóng góp và checklist pull request
+Makefile                   # make check | sync | diff | test | install
 ```
 
 ## Cài đặt
@@ -58,19 +61,32 @@ Một lệnh, không copy tay:
 bash /đường/dẫn/tới/pstack-universal/scripts/install.sh /đường/dẫn/tới/dự-án
 ```
 
-Script chép `AGENTS.md`, `.ai/` và `scripts/` vào dự án rồi chạy `sync.sh` tại
-đó. Sau đó điền lệnh build, test, lint vào mục **Project overrides** cuối
-`AGENTS.md`.
+Script chép `AGENTS.md`, `.ai/`, `scripts/` và `VERSION` vào dự án rồi chạy
+`sync.sh` tại đó. Sau đó điền lệnh build, test, lint vào mục **Project overrides**
+cuối `AGENTS.md`.
 
 | Tùy chọn | Tác dụng |
 |---|---|
-| `--force` | Gộp `AGENTS.md`, `.ai/` và `scripts/` hiện tại đè lên bản trong dự án, rồi chạy lại sync. Đây là cách cập nhật |
+| `--force` | Gộp `AGENTS.md`, `.ai/`, `scripts/` và `VERSION` hiện tại đè lên bản trong dự án, rồi chạy lại sync. Đây là cách cập nhật; script sẽ in phiên bản cũ và mới |
 | `--dry-run` | In ra việc sẽ làm, không thay đổi gì |
 | `--no-sync` | Chỉ chép file, không sinh file quy tắc cho agent |
+| `--uninstall` | Gỡ những gì pstack đã cài (file sinh ra, script, kỹ năng kèm theo), giữ lại file của dự án. Kết hợp được với `--dry-run` |
+| `--version` | In phiên bản của bản checkout rồi thoát |
 
 Không có `--force`, script từ chối đụng vào bản cài đã có, nên không thể phá
 hỏng công việc. Khi gộp, file nào có trong nguồn sẽ được thay, phần còn lại giữ
-nguyên; `.ai/conventions.md` không nằm trong nguồn nên vẫn còn sau khi cập nhật.
+nguyên; `.ai/conventions.md` và mọi kỹ năng bạn tự thêm không nằm trong nguồn
+nên vẫn còn sau khi cập nhật.
+
+> **Đừng sửa file kỹ năng kèm theo** trong dự án đã cài — bản cập nhật
+> `--force` sẽ thay chúng. Hãy tự tạo `.ai/skills/<tên>.md`; file thừa không bao
+> giờ bị cập nhật hay gỡ bỏ đụng tới.
+
+Để gỡ pstack khỏi một dự án:
+
+```bash
+bash /đường/dẫn/tới/pstack-universal/scripts/install.sh --uninstall /đường/dẫn/tới/dự-án
+```
 
 <details>
 <summary>Cài bằng tay, nếu script không hợp với cách bạn làm</summary>
@@ -98,8 +114,9 @@ Hướng dẫn đầy đủ: [docs/vi/getting-started.md](docs/vi/getting-starte
 Tên đường dẫn thay đổi theo phiên bản công cụ. Nếu agent của bạn tìm ở chỗ
 khác, sửa danh sách `place` trong `scripts/sync.sh`.
 
-Sau mỗi lần sửa `AGENTS.md`, chạy lại `sync.sh`. Trong CI, chạy
-`bash scripts/sync.sh --check` để báo lỗi khi file sinh ra đã lệch.
+Sau mỗi lần sửa `AGENTS.md`, chạy lại `sync.sh`. Muốn xem sync sẽ thay đổi gì
+mà chưa ghi ra, chạy `bash scripts/sync.sh --diff` (hoặc `make diff`). Trong CI,
+chạy `bash scripts/sync.sh --check` để báo lỗi khi file sinh ra đã lệch.
 
 ## Lệnh
 
@@ -151,8 +168,16 @@ make check     # kiểm tra file sinh ra có lệch không, rồi chạy bộ te
 ```
 
 `make check` chạy `scripts/sync.sh --check` và `scripts/test.sh`. Bộ test phủ
-hành vi của `install.sh`, CLI của `load_skill.py`, và việc mọi liên kết tương
-đối trong tài liệu đều tồn tại. CI chạy đúng lệnh này.
+hành vi của `install.sh`, khả năng phát hiện lệch của `sync.sh`, CLI của
+`load_skill.py`, việc mọi liên kết tương đối trong tài liệu đều tồn tại, và
+việc `docs/en` cùng `docs/vi` không bị lệch. CI chạy đúng lệnh này, cộng thêm
+ShellCheck cho các script Bash và Ruff cho file Python.
+
+## Đóng góp
+
+Quy trình, versioning và checklist pull request:
+[CONTRIBUTING.md](CONTRIBUTING.md). Thay đổi gần đây:
+[CHANGELOG.md](CHANGELOG.md).
 
 ## Giới hạn cần biết
 

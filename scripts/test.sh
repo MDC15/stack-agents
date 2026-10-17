@@ -93,6 +93,80 @@ want_rc 2 "install: missing target is a usage error"
 run "$root/scripts/install.sh" --nope "$tmp/x"
 want_rc 2 "install: unknown flag is a usage error"
 
+run "$root/scripts/install.sh" --version
+want_rc 0 "install: --version succeeds"
+want_out "pstack-universal $(cat "$root/VERSION")" "install: --version reports this checkout's version"
+
+# --- sync.sh ---------------------------------------------------------------
+cp -R "$root" "$tmp/syncsrc"
+printf '\n<!-- drift marker -->\n' >>"$tmp/syncsrc/AGENTS.md"
+
+run bash -c "cd '$tmp/syncsrc' && bash scripts/sync.sh --check"
+want_rc 1 "sync: --check fails after AGENTS.md is edited"
+want_out "out of date: CLAUDE.md" "sync: --check names the stale file"
+
+run bash -c "cd '$tmp/syncsrc' && bash scripts/sync.sh --diff"
+want_rc 1 "sync: --diff fails on drift like --check"
+want_out "drift marker" "sync: --diff prints the difference"
+
+run bash -c "cd '$tmp/syncsrc' && bash scripts/sync.sh"
+want_rc 0 "sync: regenerates after a drift"
+
+run bash -c "cd '$tmp/syncsrc' && bash scripts/sync.sh --check"
+want_rc 0 "sync: --check passes again after a sync"
+
+run bash -c "cd '$tmp/syncsrc' && bash scripts/sync.sh --nope"
+want_rc 2 "sync: unknown flag is a usage error"
+
+if grep -q '^alwaysApply: true$' "$tmp/syncsrc/.cursor/rules/pstack.mdc"; then
+  ok "sync: cursor file keeps the alwaysApply frontmatter"
+else
+  no "sync: cursor file keeps the alwaysApply frontmatter"
+fi
+
+banner_missing=0
+for f in CLAUDE.md .clinerules .roorules .windsurfrules .github/copilot-instructions.md .cursor/rules/pstack.mdc; do
+  grep -q 'Generated from AGENTS.md' "$tmp/syncsrc/$f" || banner_missing=1
+done
+if ((banner_missing == 0)); then
+  ok "sync: every generated file carries the source banner"
+else
+  no "sync: every generated file carries the source banner"
+fi
+
+# --- uninstall --------------------------------------------------------------
+run "$root/scripts/install.sh" "$tmp/p4"
+want_rc 0 "uninstall: setup install succeeds"
+echo "# project rule" >"$tmp/p4/.ai/conventions.md"
+echo "# mine" >"$tmp/p4/.ai/skills/mine.md"
+
+run "$root/scripts/install.sh" --uninstall --dry-run "$tmp/p4"
+want_rc 0 "uninstall: --dry-run succeeds"
+want_out "would remove" "uninstall: --dry-run says what it would remove"
+if [[ -f "$tmp/p4/CLAUDE.md" && -f "$tmp/p4/scripts/sync.sh" ]]; then
+  ok "uninstall: --dry-run removes nothing"
+else
+  no "uninstall: --dry-run removes nothing"
+fi
+
+run "$root/scripts/install.sh" --uninstall "$tmp/p4"
+want_rc 0 "uninstall: succeeds on an installed target"
+want_out "removed CLAUDE.md" "uninstall: reports the generated files it removed"
+if [[ ! -e "$tmp/p4/CLAUDE.md" && ! -e "$tmp/p4/.cursor" && ! -e "$tmp/p4/scripts" && ! -e "$tmp/p4/VERSION" && ! -e "$tmp/p4/.ai/principles.md" ]]; then
+  ok "uninstall: removes generated files, scripts, VERSION and .ai files"
+else
+  no "uninstall: removes generated files, scripts, VERSION and .ai files"
+fi
+if [[ -f "$tmp/p4/AGENTS.md" && -f "$tmp/p4/.ai/conventions.md" && -f "$tmp/p4/.ai/skills/mine.md" ]]; then
+  ok "uninstall: keeps AGENTS.md, .ai/conventions.md and custom skills"
+else
+  no "uninstall: keeps AGENTS.md, .ai/conventions.md and custom skills"
+fi
+
+run "$root/scripts/install.sh" --uninstall "$tmp/p4"
+want_rc 0 "uninstall: a second run succeeds"
+want_out "nothing to uninstall" "uninstall: a second run has nothing to remove"
+
 # --- load_skill.py ---------------------------------------------------------
 run python3 -I "$root/scripts/load_skill.py" list
 want_rc 0 "loader: list succeeds"
@@ -116,7 +190,7 @@ if ((rc != 0)); then ok "loader: rejects an unknown kind"; else no "loader: reje
 # Published documentation only: README pair and both docs/ languages. An installed
 # project ships neither, so skip there instead of reporting a false failure.
 if [[ -f "$root/README.md" || -d "$root/docs" ]]; then
-  link_files=("$root/README.md" "$root/README.vi.md")
+  link_files=("$root/README.md" "$root/README.vi.md" "$root/CONTRIBUTING.md")
   while IFS= read -r f; do link_files+=("$f"); done < <(find "$root/docs/en" "$root/docs/vi" -name '*.md' 2>/dev/null | sort)
 
   # Drop fenced blocks and inline code spans so examples are never read as links.
@@ -150,6 +224,39 @@ if [[ -f "$root/README.md" || -d "$root/docs" ]]; then
   fi
 else
   echo "SKIP: link check (this checkout has no README.md or docs/)"
+fi
+
+# --- bilingual documentation parity -----------------------------------------
+# docs/en and docs/vi must carry the same filenames with the same heading
+# counts, so a translation cannot silently fall behind. Installed projects
+# ship no docs/, so skip there like the link check does.
+if [[ -d "$root/docs/en" && -d "$root/docs/vi" ]]; then
+  parity_pairs=0
+  parity_ok=0
+  for f in "$root"/docs/en/*.md; do
+    base="$(basename "$f")"
+    if [[ ! -f "$root/docs/vi/$base" ]]; then
+      no "parity: docs/vi/$base is missing"
+      continue
+    fi
+    parity_pairs=$((parity_pairs + 1))
+    en_heads="$(grep -c '^#' "$f")"
+    vi_heads="$(grep -c '^#' "$root/docs/vi/$base")"
+    if [[ "$en_heads" == "$vi_heads" ]]; then
+      parity_ok=$((parity_ok + 1))
+    else
+      no "parity: $base has $en_heads headings in docs/en but $vi_heads in docs/vi"
+    fi
+  done
+  while IFS= read -r f; do
+    base="$(basename "$f")"
+    [[ -f "$root/docs/en/$base" ]] || no "parity: docs/en/$base is missing (only docs/vi has it)"
+  done < <(find "$root/docs/vi" -maxdepth 1 -name '*.md' | sort)
+  if ((parity_pairs && parity_ok == parity_pairs)); then
+    ok "parity: $parity_pairs documentation files match across docs/en and docs/vi"
+  fi
+else
+  echo "SKIP: bilingual parity (this checkout has no docs/en or docs/vi)"
 fi
 
 # --- report ----------------------------------------------------------------
