@@ -61,6 +61,11 @@ func runInit() error {
 		return err
 	}
 
+	p, err := project.Open(path)
+	if err != nil {
+		return err
+	}
+
 	results, _ := detectAll()
 	plan, err := project.LinkPlan(detectedAgents(results), parseAgentIDs(agentCSV), all)
 	if err != nil {
@@ -98,10 +103,6 @@ func runInit() error {
 		}
 	}
 
-	p, err := project.Open(path)
-	if err != nil {
-		return err
-	}
 	actions, err := p.Install(stackagents.Assets, force, plan)
 	if err != nil {
 		return err

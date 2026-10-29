@@ -68,11 +68,9 @@ and have its body call `load_skill`, returning the text. Leave the description
 telling the model to call it only when a command is invoked, so the behaviour
 matches the operating loop in `AGENTS.md`.
 
-The repository's own test suite covers the name check:
-
-```bash
-bash scripts/test.sh
-```
+The repository's own test suite covers the name check — it is
+[`repo_test.go`](../../repo_test.go) now, run by `go test ./...`; and
+[cli.md](cli.md) documents the same CLI the tests drive.
 
 ## Next
 

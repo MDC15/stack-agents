@@ -7,7 +7,10 @@ alwaysApply: true
 
 # stack-agents
 
-Reply in the user's language. Code, identifiers and commit messages stay in English unless the repo says otherwise.
+Rules and workflows, shipped as one static binary. You edit only this file;
+`stack sync` re-renders every agent's rule file from it. Reply in the user's
+language. Code, identifiers and commit messages stay in English unless the
+repo says otherwise.
 
 ## Operating loop
 

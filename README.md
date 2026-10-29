@@ -1,20 +1,21 @@
 # stack-agents
 
 A set of Markdown rules and workflows that works with any AI coding agent:
-Claude Code, Cursor, Codex, Cline, Roo Code, Windsurf, GitHub Copilot, or an
-agent you build yourself with LangChain or CrewAI.
+Claude Code, Cursor, Codex, Cline, Roo Code, Windsurf, OpenCode, GitHub
+Copilot, or an agent you build yourself with LangChain or CrewAI.
 
-The idea: **one source of truth (`AGENTS.md`)**, with a script that generates
-each tool's own rule file from it. Skills are read only when they are needed,
-so they never sit in the context window unused.
+The idea: **one source of truth (`AGENTS.md`)**, rendered by a single static
+binary (`stack`) into each tool's own rule file. Skills load on demand, so
+they never sit in the context window unused.
 
 **Languages:** English | [Tiếng Việt](README.vi.md)
 
 ## How it works
 
 `AGENTS.md` holds the operating loop, the skill table and the hard rules. You
-edit that file and nothing else. `scripts/sync.sh` writes its contents into
-every per-tool rule file your agent looks for, so they cannot drift apart.
+edit that file and nothing else. `stack sync` renders it into a `.agents/`
+directory and links or copies it to every fixed path your agent reads —
+nothing else to run, nothing to drift.
 
 Skills and playbooks live under `.ai/` and load on demand: the agent reads
 `.ai/skills/tdd.md` when `/tdd` is invoked, and not before.
@@ -24,117 +25,133 @@ More: [docs/en/how-it-works.md](docs/en/how-it-works.md).
 ## Structure
 
 ```
-AGENTS.md                  # Single source of truth: loop, skill table, hard rules
-VERSION                    # Current version; copied into every install
+AGENTS.md                       # Single source of truth: loop, skill table, hard rules
+VERSION                         # Current version; embedded in the binary
 .ai/
-├── principles.md          # 16 engineering principles (read for non-trivial work)
-├── skills/                # Invoked as /...
-│   ├── architect.md       # Design before writing code
-│   ├── arena.md           # Compare approaches before committing
-│   ├── red-team.md        # Adversarial review (alias /swarm)
-│   ├── tdd.md             # Red - green - refactor
-│   ├── verify.md          # Evidence before "done" (runs automatically)
-│   ├── checkpoint.md      # Compare state around risky commands
-│   ├── unslop.md          # Cut filler, keep substance
-│   └── conventions.md     # Learn this repo's habits, save to .ai/conventions.md
-└── playbooks/             # Chosen by /auto <goal>
-    ├── debug.md           # Includes a production-incident branch
+├── principles.md               # 16 engineering principles (read for non-trivial work)
+├── skills/                     # Invoked as /...
+│   ├── architect.md            # Design before writing code
+│   ├── arena.md                # Compare approaches before committing
+│   ├── red-team.md             # Adversarial review (alias /swarm)
+│   ├── tdd.md                  # Red - green - refactor
+│   ├── verify.md               # Evidence before "done" (runs automatically)
+│   ├── checkpoint.md           # Compare state around risky commands
+│   ├── unslop.md               # Cut filler, keep substance
+│   └── conventions.md          # Learn this repo's habits, save to .ai/conventions.md
+└── playbooks/                  # Chosen by /auto <goal>
+    ├── debug.md                # Includes a production-incident branch
     └── refactor.md
-scripts/
-├── install.sh             # Install, update or uninstall with one command
-├── sync.sh                # Generate each agent's rule file from AGENTS.md
-├── test.sh                # Self-check: install.sh, sync.sh, load_skill.py, links
-└── load_skill.py          # Loader for custom agents
-docs/
-├── en/                    # Canonical documentation (English)
-└── vi/                    # Vietnamese translation of docs/en
-CHANGELOG.md               # What changed, per version
-CONTRIBUTING.md            # Workflow and pull-request checklist
-Makefile                   # make check | sync | diff | test | install
+cmd/stack/                      # CLI: init, status, sync, check, uninstall, version
+internal/
+├── agents/                     # Registry: 8 agents and the fixed paths they read
+├── detect/                     # Finds installed agents on this machine
+├── generate/                   # Renders AGENTS.md into each file format
+├── project/                    # Install, sync, check and uninstall one project
+└── ui/                         # Agent table and the y/n prompt
+embed.go                        # Embeds AGENTS.md, VERSION, .ai/ for shipping
+.agents/                        # Generated; committed so CI can check drift
+scripts/load_skill.py           # Loader for custom agents
+docs/en/                        # Canonical documentation (English)
+docs/vi/                        # Vietnamese translation of docs/en
+CHANGELOG.md                    # What changed, per version
+CONTRIBUTING.md                 # Workflow and pull-request checklist
+Makefile                        # make check | sync | diff | test
 ```
 
 ## Install
 
-One command, no manual copying:
+`stack` is a single binary. Three ways to get it:
 
 ```bash
-bash /path/to/stack-agents/scripts/install.sh /path/to/your-project
+go install github.com/MDC15/stack-agents/cmd/stack@latest
 ```
 
-It copies `AGENTS.md`, `.ai/`, `scripts/` and `VERSION` into the project and
-runs `sync.sh` there. Then fill in the build, test and lint commands under
-**Project overrides** at the end of `AGENTS.md`.
+or download an archive from the GitHub Releases page (linux, darwin,
+windows × amd64, arm64), or build from a checkout:
+
+```bash
+git clone https://github.com/MDC15/stack-agents && cd stack-agents && go build -o stack ./cmd/stack
+```
+
+Then, in any project:
+
+```bash
+stack init --path /path/to/your-project
+```
+
+This detects the agents installed on the machine, shows the plan, asks once,
+and writes `AGENTS.md`, `VERSION`, `.ai/`, `scripts/load_skill.py` plus the
+generated `.agents/` files and the per-agent links. It refuses to touch an
+existing install without `--force`, so a second run cannot destroy anything.
+A `--force` update merges the new `AGENTS.md` over yours while keeping your
+**Project overrides** section.
+
+Real output, on a machine with OpenCode installed:
+
+```
+╭──────────────┬─────────────────┬─────────────────╮
+│ AGENT        │ VERSION         │ STATUS          │
+├──────────────┼─────────────────┼─────────────────┤
+│ Claude Code  │ —               │ ✓ link          │
+│ OpenCode     │ opencode v2.0.2 │ ✓ reads AGENTS. │
+...
+╰──────────────┴─────────────────┴─────────────────╯
+created .agents/claude.md
+linked CLAUDE.md -> .agents/claude.md
+...
+Next: edit AGENTS.md, then run `stack sync --path .`
+```
 
 | Option | Effect |
 |---|---|
-| `--force` | Merge the current `AGENTS.md`, `.ai/`, `scripts/` and `VERSION` over the target, then re-run the sync. This is the update path; it prints the old and new version |
-| `--dry-run` | Print what would happen, change nothing |
-| `--no-sync` | Copy the files but do not generate the agent rule files |
-| `--uninstall` | Remove what stack-agents installed (generated files, scripts, shipped skills), keeping the project's own files. Honours `--dry-run` |
-| `--version` | Print the version of the checkout and exit |
-
-Without `--force`, the script refuses to touch an existing install, so it cannot
-destroy work by accident. A merge replaces files the source contains and leaves
-the rest alone; `.ai/conventions.md` and any skill you added yourself are not in
-the source, so they survive an update.
+| `--agents <csv>` | Link exactly these agent IDs (claude, opencode, codex, cursor, copilot, cline, roo, windsurf) |
+| `--all` | Link every agent |
+| `--force` | Update an existing install, preserving Project overrides |
+| `--dry-run` | Print the plan, change nothing |
+| `--yes` | Skip the confirmation prompt |
+| `--path` | Project directory (default `.`) |
 
 > **Do not edit the shipped skill files** in an installed project — a
 > `--force` update replaces them. Add your own `.ai/skills/<name>.md` instead;
 > extra files are never touched by an update or an uninstall.
 
-To remove stack-agents from a project:
-
-```bash
-bash /path/to/stack-agents/scripts/install.sh --uninstall /path/to/your-project
-```
-
-<details>
-<summary>Manual install, if the script does not fit your setup</summary>
-
-1. Copy `AGENTS.md`, `.ai/` and `scripts/` into the project root.
-2. Fill in the build, test and lint commands under **Project overrides** at
-   the end of `AGENTS.md`.
-3. Run `bash scripts/sync.sh`.
-
-</details>
-
 Full walkthrough: [docs/en/getting-started.md](docs/en/getting-started.md).
 
 ## Generated files
 
-| Agent | File it reads |
-|---|---|
-| Claude Code | `CLAUDE.md` |
-| Cursor | `.cursor/rules/stack-agents.mdc` (always applied) |
-| Cline | `.clinerules` |
-| Roo Code | `.roorules` |
-| Windsurf | `.windsurfrules` |
-| GitHub Copilot | `.github/copilot-instructions.md` |
-| Codex and any agent that reads `AGENTS.md` | `AGENTS.md` directly |
+| Agent | Generated under `.agents/` | The agent reads | How it is linked |
+|---|---|---|---|
+| Claude Code | `claude.md` | `CLAUDE.md` | symlink |
+| OpenCode | — | `AGENTS.md` | direct, no file |
+| Codex | — | `AGENTS.md` | direct, no file |
+| Cursor | `cursor.mdc` | `.cursor/rules/stack-agents.mdc` | symlink |
+| GitHub Copilot | `copilot.md` | `.github/copilot-instructions.md` | copy with banner |
+| Cline | `cline.md` | `.clinerules` | symlink |
+| Roo Code | `roo.md` | `.roorules` | symlink |
+| Windsurf | `windsurf.md` | `.windsurfrules` | symlink |
 
-Tool versions change these paths. If your agent looks somewhere else, edit the
-`place` list in `scripts/sync.sh`.
+Presence is opt-in by default: only detected agents get links, plus the ones
+you name with `--agents` or `--all`. After every edit to `AGENTS.md`, run
+`stack sync` again. `stack check` fails naming any stale file — that is what
+CI runs, so the tool-specific files cannot drift apart.
 
-After every edit to `AGENTS.md`, run `sync.sh` again. To see what a sync would
-change without writing, run `bash scripts/sync.sh --diff` (or `make diff`).
-In CI, run `bash scripts/sync.sh --check` to fail when a generated file has
-drifted.
+Adding a new agent means one row in
+[`internal/agents/agents.go`](internal/agents/agents.go): see
+[docs/en/extending.md](docs/en/extending.md).
 
 ## Commands
 
 | Command | Effect |
 |---|---|
-| `/architect` | Design (data, flow, interfaces), then stop and wait for approval |
-| `/arena` | Two or three genuinely different approaches, a comparison table, a recommendation |
-| `/red-team` | Attack the work through three lenses: security, operations, QA |
-| `/tdd` | Failing test first, minimal code, then refactor |
-| `/verify` | Run lint, tests, build and exercise the change. Runs automatically before "done" |
-| `/checkpoint` | Record and compare state around a risky command |
-| `/unslop` | Tighten prose, keeping every number and caveat |
-| `/conventions` | Learn this repo's and this user's habits, save them after you approve |
-| `/auto <goal>` | Pick the matching playbook (`debug`, `refactor`) and run it |
+| `stack init` | Detect agents, show the plan, install and link |
+| `stack status` | Per-agent state: ok / drift / missing / skipped |
+| `stack sync` | Re-render `.agents/*` and refresh the planned links |
+| `stack check` | Fail naming every stale file; `--diff` shows the differences |
+| `stack uninstall` | Remove what stack installed, keep your own files |
+| `stack version` | Print the embedded version |
 
-Each one in full: [docs/en/skills.md](docs/en/skills.md).
+Exit codes: 0 success, 1 drift or failure, 2 usage error. Every command and
+flag: [docs/en/cli.md](docs/en/cli.md).
 
 ## Custom agents
 
@@ -156,7 +173,7 @@ More: [docs/en/custom-agents.md](docs/en/custom-agents.md).
 ## Extending
 
 Add a skill by creating `.ai/skills/<name>.md`, adding one row to the table in
-`AGENTS.md`, and running `sync.sh`. Playbooks work the same way under
+`AGENTS.md`, and running `stack sync`. Playbooks work the same way under
 `.ai/playbooks/`. Keep `AGENTS.md` short; longer rules belong in `.ai/`, where
 they load only when needed.
 
@@ -165,14 +182,14 @@ More: [docs/en/extending.md](docs/en/extending.md).
 ## Verification
 
 ```bash
-make check     # generated-file drift check, then the test suite
+make check     # gofmt, go vet, tests, then `stack check`
 ```
 
-`make check` runs `scripts/sync.sh --check` and `scripts/test.sh`. The test
-suite covers `install.sh` behaviour, `sync.sh` drift detection, the
-`load_skill.py` CLI, that every relative link in the documentation resolves,
-and that `docs/en` and `docs/vi` stay in step. CI runs the same command, plus
-ShellCheck over the shell scripts and Ruff over the Python loader.
+The test suite covers the generated-file render and drift detection, install
+and uninstall behaviour, agent detection, the CLI itself (subprocess tests
+against a built binary), the `load_skill.py` CLI, every relative link in the
+documentation, and that `docs/en` and `docs/vi` stay in step. CI runs the same
+suite plus the generated-file drift check and Ruff over the Python loader.
 
 ## Contributing
 
@@ -182,12 +199,18 @@ Workflow, versioning and the pull-request checklist:
 
 ## Limitations
 
+- Detection is best-effort: `stack` looks for each agent's binary on PATH,
+  a marker directory in `$HOME`, or an installed VS Code extension. Agents
+  installed another way are reported as not found; name them with
+  `--agents` explicitly.
+- Symlinks are rewritten to copies (with the same banner) when the OS refuses
+  to create one, so an install still works end to end.
+- Symlinked rule files render poorly on a Windows git checkout: they either
+  become plain text files or need developer mode enabled. The copy fallback
+  in the previous bullet is the same story.
 - These are written instructions, not an enforcement mechanism. How closely an
   agent follows them depends on the model and the tool. Dangerous operations
   still need permissions and a sandbox on the tool's side.
-- The per-agent file paths above are not verified against every current
-  version of every tool. Try one simple request (for example `/verify`) to
-  confirm your agent picked up the config.
 
 ## License
 

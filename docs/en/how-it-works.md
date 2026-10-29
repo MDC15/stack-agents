@@ -5,36 +5,65 @@
 ## One source of truth
 
 Every agent wants its rules in a different file. Maintaining the same text in
-six files goes wrong the first time you edit one of them. So `AGENTS.md` is the
-only file you edit, and `scripts/sync.sh` derives the rest from it.
+six files goes wrong the first time you edit one of them. So `AGENTS.md` is
+the only file you edit, and the `stack` binary derives the rest from it.
 
-That is the whole architecture. There is no build step, no dependency, and
-nothing to install beyond `bash`.
+That is the whole architecture. One static binary, no runtime dependency,
+nothing to leave on a machine but the files it generates.
 
-## What the sync generates
+## `.agents/` and the fixed paths
 
-| Agent | File | Note |
-|---|---|---|
-| Claude Code | `CLAUDE.md` | plain copy |
-| Cursor | `.cursor/rules/stack-agents.mdc` | prefixed with `alwaysApply: true` frontmatter |
-| Cline | `.clinerules` | plain copy |
-| Roo Code | `.roorules` | plain copy |
-| Windsurf | `.windsurfrules` | plain copy |
-| GitHub Copilot | `.github/copilot-instructions.md` | plain copy |
+`stack sync` renders `AGENTS.md` once per output format into `.agents/`:
 
-Every generated file opens with a banner naming `AGENTS.md` as the source. Each
-plain copy is byte-identical to `AGENTS.md` after the banner; the Cursor file
-adds YAML frontmatter so the rule loads without being requested.
+| Agent | Generated | The agent reads | How |
+|---|---|---|---|
+| Claude Code | `.agents/claude.md` | `CLAUDE.md` | relative symlink |
+| OpenCode | — | `AGENTS.md` | reads it directly |
+| Codex | — | `AGENTS.md` | reads it directly |
+| Cursor | `.agents/cursor.mdc` | `.cursor/rules/stack-agents.mdc` | relative symlink |
+| GitHub Copilot | `.agents/copilot.md` | `.github/copilot-instructions.md` | banner copy |
+| Cline | `.agents/cline.md` | `.clinerules` | relative symlink |
+| Roo Code | `.agents/roo.md` | `.roorules` | relative symlink |
+| Windsurf | `.agents/windsurf.md` | `.windsurfrules` | relative symlink |
 
-`scripts/sync.sh --check` compares each generated file against what the sync
-would write, and exits non-zero naming any that differ. CI runs it, which is
-what stops the six files from drifting apart. `--diff` does the same but also
-prints the difference for each stale file, so drift is visible and not just
-named.
+Symlinks point inward (`CLAUDE.md` → `.agents/claude.md`) so one rewrite
+reaches every agent at once. Copilot does not follow them, so it gets a
+banner-carrying copy rewritten on the spot. When the OS refuses a symlink,
+`stack` falls back to the same banner copy, so an install always completes.
 
-If a tool looks somewhere else — these paths change between versions — edit the
-`place` list at the bottom of `scripts/sync.sh`. The rest of the script does not
-need to change.
+Every generated file opens with a banner naming `AGENTS.md` as the source:
+`<!-- Generated from AGENTS.md by stack sync. Edit AGENTS.md, not this file. -->`
+That banner is also the ownership marker: sync, check and uninstall only
+replace a file that carries it, a symlink into `.agents/`, or a file the
+embedded ship set enumerates. A file you own — a hand-written `.clinerules`,
+your `.ai/conventions.md`, a custom skill — is never touched.
+
+## Presence is opt-in
+
+`stack sync` only touches the fixed paths of agents that are either detected
+on this machine or named with `--agents` / `--all`. Everything else stays
+away: an unplanned `.roorules` a project wrote by hand is left alone, even if
+its name is in the registry. `stack status` shows the split; `--agents` adds
+specifically; `--all` takes everything.
+
+## Drift check
+
+`stack check` compares each generated file and fixed path against what the
+sync would write right now, and exits 1 naming every stale entry:
+
+```
+out of date: .agents/claude.md
+```
+
+An edit to `AGENTS.md` makes the generated files stale until the next sync;
+CI runs the check, which is what stops the tool-specific files from drifting
+apart. `--diff` prints the difference for each stale `.agents/*` file, so
+drift is visible and not just named.
+
+If a tool looks somewhere else — these paths change between versions — add a
+row to the registry in
+[`internal/agents/agents.go`](../../internal/agents/agents.go) and rerun
+`make check`. Nothing else needs to change.
 
 ## Why skills load on demand
 
@@ -62,14 +91,16 @@ are the ones that matter most, and they are the ones a tool-level permission
 system should back up. Treat `AGENTS.md` as the request and the sandbox as the
 guarantee.
 
-## Install and sync are separate
+## Install, sync and uninstall are separate
 
-- `scripts/install.sh` copies the repository into a project: `AGENTS.md`, `.ai/`,
-  `scripts/` and `VERSION`. It is a one-time act, and it refuses to overwrite by
-  default. `--force` updates an existing install and reports the version change;
-  `--uninstall` removes what stack-agents manages and keeps the project's own files.
-- `scripts/sync.sh` runs inside a project and derives the per-agent files from
+- `stack init` makes a project a stack-agents project: it copies the ship
+  set, renders `.agents/`, creates links. One-time; refuses to overwrite
+  without `--force`, and `--force` merges while preserving **Project
+  overrides**.
+- `stack sync` runs inside a project and derives the per-agent files from
   `AGENTS.md`. It runs after every edit to `AGENTS.md`, and in CI.
+- `stack uninstall` removes everything stack owns and keeps the project's own
+  files, so leaving the system is a one-command act too.
 
 Keeping them apart is why updating a project with `--force` merges the source
 files over the project's without destroying `.ai/conventions.md`.
@@ -77,5 +108,6 @@ files over the project's without destroying `.ai/conventions.md`.
 ## Next
 
 - [getting-started.md](getting-started.md) — install it.
+- [cli.md](cli.md) — every command and flag.
 - [skills.md](skills.md) — what each command does.
 - [custom-agents.md](custom-agents.md) — wire it into your own loop.

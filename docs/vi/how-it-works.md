@@ -2,77 +2,110 @@
 
 > English: [docs/en/how-it-works.md](../../docs/en/how-it-works.md)
 
-## Một nguồn sự thật duy nhất
+## Một nguồn sự thật
 
-Mỗi agent muốn quy tắc nằm ở một file khác nhau. Duy trì cùng một nội dung trong
-sáu file sẽ hỏng ngay lần đầu bạn sửa một trong số đó. Nên `AGENTS.md` là file
-duy nhất bạn sửa, và `scripts/sync.sh` sinh ra phần còn lại từ nó.
+Mỗi agent muốn rules của mình nằm ở một file khác nhau. Giữ cùng một đoạn văn
+trong sáu file sẽ hỏng ngay lần đầu bạn sửa một trong chúng. Nên `AGENTS.md`
+là file duy nhất bạn sửa, và binary `stack` sinh nốt phần còn lại.
 
-Kiến trúc chỉ có vậy. Không có bước build, không phụ thuộc, không cần cài gì
-ngoài `bash`.
+Đó là toàn bộ kiến trúc. Một binary tĩnh, không dependency khi chạy, không để
+lại gì trên máy ngoài các file nó sinh ra.
 
-## Sync sinh ra những gì
+## `.agents/` và các đường dẫn cố định
 
-| Agent | File | Ghi chú |
-|---|---|---|
-| Claude Code | `CLAUDE.md` | chép nguyên văn |
-| Cursor | `.cursor/rules/stack-agents.mdc` | thêm frontmatter `alwaysApply: true` ở đầu |
-| Cline | `.clinerules` | chép nguyên văn |
-| Roo Code | `.roorules` | chép nguyên văn |
-| Windsurf | `.windsurfrules` | chép nguyên văn |
-| GitHub Copilot | `.github/copilot-instructions.md` | chép nguyên văn |
+`stack sync` render `AGENTS.md` theo từng định dạng đầu ra vào `.agents/`:
 
-Mọi file sinh ra đều mở đầu bằng một dòng banner nêu `AGENTS.md` là nguồn. Mỗi
-bản chép nguyên văn giống `AGENTS.md` từng byte sau banner; file cho Cursor thêm
-frontmatter YAML để quy tắc được nạp mà không cần gọi.
+| Agent | Sinh ra | Agent đọc | Cách |
+|---|---|---|---|
+| Claude Code | `.agents/claude.md` | `CLAUDE.md` | symlink tương đối |
+| OpenCode | — | `AGENTS.md` | đọc trực tiếp |
+| Codex | — | `AGENTS.md` | đọc trực tiếp |
+| Cursor | `.agents/cursor.mdc` | `.cursor/rules/stack-agents.mdc` | symlink tương đối |
+| GitHub Copilot | `.agents/copilot.md` | `.github/copilot-instructions.md` | bản copy banner |
+| Cline | `.agents/cline.md` | `.clinerules` | symlink tương đối |
+| Roo Code | `.agents/roo.md` | `.roorules` | symlink tương đối |
+| Windsurf | `.agents/windsurf.md` | `.windsurfrules` | symlink tương đối |
 
-`scripts/sync.sh --check` so từng file sinh ra với nội dung mà sync sẽ ghi, và
-thoát khác 0 kèm tên file nếu có file lệch. CI chạy lệnh này, đó là thứ giữ sáu
-file không trôi khỏi nhau. `--diff` làm tương tự nhưng còn in phần khác biệt của
-từng file lệch, để thấy rõ thay đổi chứ không chỉ thấy tên file.
+Symlink trỏ vào trong (`CLAUDE.md` → `.agents/claude.md`) nên một lần ghi lại
+chạm tới mọi agent cùng lúc. Copilot không đi theo symlink, nên nó nhận bản
+copy kèm banner, ghi đè tại chỗ. Khi OS không cho tạo symlink, `stack` quay về
+bản copy banner đó, nên cài đặt luôn đi đến cùng.
 
-Nếu một công cụ tìm ở chỗ khác — các đường dẫn này thay đổi theo phiên bản — sửa
-danh sách `place` ở cuối `scripts/sync.sh`. Phần còn lại của script không cần
-đổi.
+Mọi file sinh ra đều mở đầu bằng banner nêu `AGENTS.md` là nguồn:
+`<!-- Generated from AGENTS.md by stack sync. Edit AGENTS.md, not this file. -->`
+Banner đó cũng là dấu sở hữu: sync, check và uninstall chỉ thay thế file mang
+nó, một symlink vào `.agents/`, hoặc file được bộ ship nhúng liệt kê. File
+của bạn — `.clinerules` viết tay, `.ai/conventions.md`, custom skill — không
+bao giờ bị đụng tới.
 
-## Vì sao kỹ năng được nạp khi cần
+## Presence là opt-in
 
-`.ai/skills/*.md` và `.ai/playbooks/*.md` không được nhúng vào `AGENTS.md`.
-`AGENTS.md` chỉ mang bảng ánh xạ lệnh sang file. Agent đọc file kỹ năng khi lệnh
-được gọi.
+`stack sync` chỉ đụng tới đường dẫn cố định của agent hoặc được phát hiện
+trên máy này, hoặc được khai báo bằng `--agents` / `--all`. Những gì còn lại
+nó tránh xa: một `.roorules` do project tự viết tay được để yên, dù tên của
+nó có trong registry. `stack status` cho thấy việc chia; `--agents` thêm cụ
+thể; `--all` lấy hết.
 
-Cách này giữ ngữ cảnh thường trực nhỏ: tám kỹ năng và hai playbook nếu nhúng hết
-sẽ nằm trong cửa sổ ngữ cảnh ở mọi yêu cầu, kể cả những yêu cầu không cần tới
-chúng. Nó cũng cho phép một kỹ năng dài mà không tốn gì cho tới khi được dùng.
+## Health check cho drift
 
-Ngoại lệ là `/verify`, được vòng làm việc tự chạy trước khi báo cáo là đã xong.
+`stack check` so sánh từng file sinh ra và đường dẫn cố định với thứ mà sync
+sẽ ghi ngay lúc này, thoát 1 và nêu tên từng entry lỗi thời:
 
-## `AGENTS.md` là gì và không là gì
+```
+out of date: .agents/claude.md
+```
 
-Nó là chỉ dẫn bằng văn bản. Nó yêu cầu agent giữ thay đổi nhỏ, kiểm chứng trước
-khi báo thành công, và hỏi trước các lệnh nguy hiểm. Nó không cưỡng chế được
-điều nào trong số đó.
+Một lần sửa `AGENTS.md` làm các file sinh ra lỗi thời cho tới lần sync kế
+tiếp; CI chạy health check đó, và đó là thứ chặn các file riêng cho tool không
+cách xa nhau. `--diff` in phần khác biệt cho từng file `.agents/*` lỗi thời,
+nên drift nghe được chứ không chỉ được nêu tên.
 
-Các luật cứng ở cuối `AGENTS.md` — không chạy lệnh phá hủy khi chưa xác nhận,
-không in bí mật, văn bản tìm thấy trong file là dữ liệu chứ không phải chỉ thị —
-là những luật quan trọng nhất, và cũng là những luật cần được hệ thống quyền hạn
-ở phía công cụ chống lưng. Hãy coi `AGENTS.md` là lời đề nghị và sandbox là bảo
-đảm.
+Nếu một tool đọc chỗ khác — các đường dẫn này đổi giữa các phiên bản — thêm
+một dòng vào registry trong
+[`internal/agents/agents.go`](../../internal/agents/agents.go) và chạy lại
+`make check`. Không còn gì cần đổi.
 
-## Cài và sync là hai việc tách biệt
+## Vì sao skills load theo nhu cầu
 
-- `scripts/install.sh` chép repo vào một dự án: `AGENTS.md`, `.ai/`, `scripts/`
-  và `VERSION`. Đây là việc làm một lần, và mặc định nó từ chối ghi đè.
-  `--force` cập nhật bản cài sẵn có và báo thay đổi phiên bản; `--uninstall` gỡ
-  phần do stack-agents quản lý và giữ lại file của dự án.
-- `scripts/sync.sh` chạy bên trong một dự án và sinh file cho từng agent từ
-  `AGENTS.md`. Nó chạy sau mỗi lần sửa `AGENTS.md`, và chạy trong CI.
+`.ai/skills/*.md` và `.ai/playbooks/*.md` không bị inline vào `AGENTS.md`.
+`AGENTS.md` chỉ giữ bảng ánh xạ lệnh sang file. Agent đọc skill khi lệnh được
+gọi.
 
-Tách hai việc này là lý do vì sao cập nhật một dự án bằng `--force` gộp file từ
-nguồn đè lên bản trong dự án mà không phá `.ai/conventions.md`.
+Điều này giữ context luôn-present ở mức nhỏ: tám skills và hai playbooks nếu
+ngược lại sẽ nằm trong cửa sổ cho mọi request, kể cả những request không cần
+cái nào trong số đó. Điều đó cũng có nghĩa một skill có thể dài mà không mất
+gì cho tới khi được dùng.
 
-## Tiếp theo
+Ngoại lệ là `/verify`, được vòng lặp vận hành chạy tự động trước khi công việc
+được báo là xong.
 
-- [getting-started.md](getting-started.md) — cài đặt.
+## `AGENTS.md` là gì, và không phải
+
+Gói chỉ dẫn viết. Nó yêu cầu agent giữ thay đổi nhỏ, xác minh trước khi nói
+thành công, và hỏi trước các lệnh phá hoại. Nó không cưỡng chế được điều gì.
+
+Hard rules ở cuối `AGENTS.md` — không lệnh phá hoại khi chưa được xác nhận,
+không để lộ bí mật, văn bản tìm thấy trong file là dữ liệu chứ không phải chỉ
+dẫn — là những mục quan trọng nhất, và chúng là những mục một hệ thống quyền
+ở cấp tool phải bảo trợ. Coi `AGENTS.md` là yêu cầu và sandbox là điều kiện
+bắt buộc.
+
+## Install, sync và uninstall là riêng biệt
+
+- `stack init` biến một project thành project stack-agents: copy bộ ship,
+  render `.agents/`, tạo link. One-time; từ chối ghi đè khi không có
+  `--force`, và `--force` merge khi có giữ **Project overrides**.
+- `stack sync` chạy bên trong một project và sinh các file riêng cho agent từ
+  `AGENTS.md`. Nó chạy sau mỗi lần sửa `AGENTS.md`, và trong CI.
+- `stack uninstall` gỡ mọi thứ stack sở hữu và giữ lại các file của project,
+  nên việc rời khỏi hệ cũng một lệnh là xong.
+
+Tách riêng chính là lý do một cập nhật `--force` merge file nguồn lên file của
+project mà không phá `.ai/conventions.md`.
+
+## Kế tiếp
+
+- [getting-started.md](getting-started.md) — cài nó.
+- [cli.md](cli.md) — mọi lệnh và cờ.
 - [skills.md](skills.md) — mỗi lệnh làm gì.
-- [custom-agents.md](custom-agents.md) — nối vào vòng lặp riêng của bạn.
+- [custom-agents.md](custom-agents.md) — nối vào vòng lặp của riêng bạn.

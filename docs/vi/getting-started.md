@@ -1,68 +1,67 @@
-# Bắt đầu
+# Getting started
 
 > English: [docs/en/getting-started.md](../../docs/en/getting-started.md)
 
-## Cần có trước
+## Điều kiện cần
 
-- `bash` phiên bản 4 trở lên.
-- `python3`, cho agent tự viết (`scripts/load_skill.py`) và cho bộ test.
-- `make`, không bắt buộc — chỉ để dùng các lệnh tắt `make`.
+- `stack` — một binary tĩnh. Cài bằng
+  `go install github.com/MDC15/stack-agents/cmd/stack@latest`, từ một gói
+  release, hoặc build từ checkout: `go build -o stack ./cmd/stack`.
+- `python3`, chỉ dùng cho custom agent (`scripts/load_skill.py`) và một test
+  trong repo; bản thân CLI không cần gì thêm.
 
-Không cần gì thêm. Repo không có phụ thuộc lúc chạy.
-
-## Cài đặt
-
-Một lệnh:
+## Khởi tạo một project
 
 ```bash
-bash /đường/dẫn/tới/stack-agents/scripts/install.sh /đường/dẫn/tới/dự-án
+stack init --path /path/to/your-project
 ```
 
-Script chép `AGENTS.md`, `.ai/` và `scripts/` vào dự án rồi chạy
-`scripts/sync.sh` tại đó, nên file quy tắc cho từng agent được sinh trong cùng
-một bước.
+Kết quả là bảng tám agent được tìm thấy hoặc bỏ qua trên máy này.
 
-| Tùy chọn | Tác dụng |
+```
+╭──────────────┬─────────────────┬─────────────────╮
+│ AGENT        │ VERSION         │ STATUS          │
+├──────────────┼─────────────────┼─────────────────┤
+│ Claude Code  │ —               │ ✓ link          │
+│ OpenCode     │ opencode v2.0.2 │ ✓ reads AGENTS. │
+│ Codex        │ —               │ ✗ skip          │
+│ Cursor       │ —               │ ✗ skip          │
+│ GitHub Copilot│ —              │ ✓ link          │
+│ Cline        │ —               │ ✗ skip          │
+│ Roo Code     │ —               │ ✗ skip          │
+│ Windsurf     │ —               │ ✗ skip          │
+╰──────────────┴─────────────────┴─────────────────╯
+```
+
+Sau đó một lần xác nhận (`--yes` bỏ qua) và quá trình cài đặt: bộ ship được
+copy, `.agents/` được render, và mọi đường dẫn cố định của các agent được
+planned sẽ hiện ra.
+
+```
+Next: edit AGENTS.md, then run `stack sync --path /path/to/your-project`
+```
+
+Ở lần chạy thứ hai, khi không có `--force`, nó từ chối với
+"already installed" — không có gì bị ghi đè nhầm.
+
+| Tuỳ chọn | Tác dụng |
 |---|---|
-| `--force` | Gộp `AGENTS.md`, `.ai/`, `scripts/` và `VERSION` từ nguồn đè lên bản trong dự án, rồi chạy lại sync. In phiên bản cũ và mới |
-| `--dry-run` | In ra việc sẽ làm, không thay đổi gì |
-| `--no-sync` | Chép file nhưng không sinh file quy tắc cho agent |
-| `--uninstall` | Gỡ những gì stack-agents đã cài, giữ lại file của dự án |
-| `--version` | In phiên bản của bản nguồn rồi thoát |
+| `--agents <csv>` | Link những agent này dù detection bỏ sót |
+| `--all` | Link mọi agent |
+| `--force` | Cập nhật install hiện có; merge `AGENTS.md` mới và giữ mục **Project overrides** của bạn |
+| `--dry-run` | In kế hoạch, không ghi gì |
+| `--yes` | Bỏ prompt |
 
-Không có `--force`, script từ chối đụng vào bản cài đã có, nên chạy lần hai vào
-cùng dự án là an toàn và không làm gì cả. Khi có `--force`, file trong nguồn
-thay thế bản tương ứng và mọi thứ khác giữ nguyên; `.ai/conventions.md` và mọi
-kỹ năng bạn tự thêm không có trong nguồn nên vẫn còn sau khi cập nhật.
+> **Đừng sửa các skill file gốc** trong `.ai/skills/` và `.ai/playbooks/` —
+> cập nhật `--force` sẽ thay thế chúng. Thay vào đó, thêm riêng
+> `.ai/skills/<name>.md` của bạn; file thêm vào vượt qua update và uninstall
+> nguyên vẹn.
 
-> **Đừng sửa file kỹ năng kèm theo** trong `.ai/skills/` và `.ai/playbooks/` —
-> bản cập nhật `--force` sẽ thay chúng. Hãy tự tạo `.ai/skills/<tên>.md`; file
-> thừa không bị cập nhật hay gỡ bỏ đụng tới.
+## Điền Project overrides
 
-Để gỡ stack-agents khỏi dự án:
-
-```bash
-bash /đường/dẫn/tới/stack-agents/scripts/install.sh --uninstall /đường/dẫn/tới/dự-án
-```
-
-Lệnh này xóa các file quy tắc đã sinh (chỉ những file còn mang banner nguồn),
-các script của stack-agents và những kỹ năng repo này kèm theo. `AGENTS.md`,
-`.ai/conventions.md` và kỹ năng tự viết được giữ lại vì chúng chứa cấu hình của
-dự án; hãy xóa tay nếu bạn không còn cần. Kết hợp với `--dry-run` để xem danh
-sách trước.
-
-<details>
-<summary>Cài bằng tay</summary>
-
-1. Chép `AGENTS.md`, `.ai/` và `scripts/` vào thư mục gốc dự án.
-2. Chạy `bash scripts/sync.sh`.
-
-</details>
-
-## Điền mục Project overrides
-
-`AGENTS.md` kết thúc bằng mục **Project overrides**. Mục này ưu tiên hơn mọi thứ
-ở trên, trừ các luật cứng. Điền lệnh thật của dự án vào đó:
+`AGENTS.md` kết thúc bằng mục **Project overrides**. Mục này có quyền ưu tiên
+so với mọi thứ phía trên, trừ hard rules. Đặt đúng các lệnh thật của project
+vào đó:
 
 ```
 - Build: `npm run build`
@@ -70,52 +69,51 @@ sách trước.
 - Lint/typecheck: `npm run lint`
 ```
 
-`/verify` đọc mục này để biết cần chạy gì. Nếu để trống, agent phải đoán từ
-`package.json`, `Makefile`, `pyproject.toml`, `Cargo.toml` hoặc cấu hình CI.
+`/verify` đọc mục này để quyết định chạy gì. Nếu bỏ trống, agent phải tự đoán
+từ `package.json`, `Makefile`, `pyproject.toml`, `Cargo.toml` hoặc cấu hình
+CI.
 
 ## Sinh lại sau mỗi lần sửa
 
-Sửa `AGENTS.md`, đừng bao giờ sửa file đã sinh. Rồi chạy:
+Sửa `AGENTS.md`, không bao giờ sửa file sinh ra. Sau đó:
 
 ```bash
-bash scripts/sync.sh
+stack sync --path /path/to/your-project
 ```
 
-Kiểm tra mà không ghi — ví dụ trong CI:
+Chỉ kiểm tra, không ghi — ví dụ trong CI:
 
 ```bash
-bash scripts/sync.sh --check     # thoát mã 1 và nêu tên file đã lệch
-bash scripts/sync.sh --diff      # như trên, và in phần khác biệt ra từng file
+stack check --path /path/to/your-project          # exit 1, nêu tên file lỗi thời
+stack check --diff --path /path/to/your-project   # tương tự, và in phần khác biệt
 ```
 
-## Kiểm chứng bản cài
+## Kiểm chứng cài đặt
 
 ```bash
-bash scripts/test.sh
+stack status --path /path/to/your-project
+stack check --path /path/to/your-project
 ```
 
-Lệnh này phủ hành vi của `install.sh`, khả năng phát hiện lệch của `sync.sh`,
-CLI của `load_skill.py`, và mức độ khớp nhau của `docs/` hai ngôn ngữ. Bản cài
-trong dự án không có `docs/`, nên các phần kiểm tra tài liệu được bỏ qua thay vì
-báo lỗi.
+`status` hiển thị một dòng cho mỗi agent; `check` sẽ in "no drift". Xác nhận
+agent nhận config bằng cách yêu cầu một việc nhỏ, ví dụ `/verify`.
 
-Khi làm việc trong chính repo stack-agents, `make check` chạy cùng bộ test đó
-cộng thêm phần kiểm tra file sinh ra có lệch không.
+Chưa nhận? Xem caveat mới tại [cli.md](cli.md#migration-từ-≤-02) — trước
+khi có `stack`, các project được cài bằng bash script; lần `stack sync` đầu
+tiên nhận diện thời kỳ đó qua banner cũ và chuyển đổi file.
 
-## Agent của bạn giờ đọc gì
+## Agent của bạn bây giờ đọc gì
 
-Mỗi công cụ đọc file riêng do sync sinh ra: `CLAUDE.md` cho Claude Code,
-`.cursor/rules/stack-agents.mdc` cho Cursor, `.clinerules` cho Cline, `.roorules` cho
-Roo Code, `.windsurfrules` cho Windsurf, `.github/copilot-instructions.md` cho
-Copilot, và chính `AGENTS.md` cho Codex cùng mọi agent đọc file đó. Bảng đầy đủ,
-kèm ghi chú, nằm trong
-[how-it-works.md](how-it-works.md).
+Mỗi tool đọc file riêng của mình, sinh từ `.agents/`: `CLAUDE.md` cho Claude
+Code, `.cursor/rules/stack-agents.mdc` cho Cursor, `.clinerules` cho Cline,
+`.roorules` cho Roo Code, `.windsurfrules` cho Windsurf,
+`.github/copilot-instructions.md` cho Copilot, và chính `AGENTS.md` cho Codex
+và OpenCode. Bảng đầy đủ, kèm ghi chú, nằm ở
+[how-it-works.md](how-it-works.md#cac-file-sinh-ra).
 
-Xác nhận đã ăn bằng cách yêu cầu một việc nhỏ, ví dụ `/verify`.
+## Kế tiếp
 
-## Tiếp theo
-
-- [how-it-works.md](how-it-works.md) — sync thực sự sinh ra những gì.
+- [how-it-works.md](how-it-works.md) — sync sinh ra loại gì.
 - [skills.md](skills.md) — từng lệnh một.
-- [extending.md](extending.md) — thêm kỹ năng hoặc playbook của bạn.
-- [../../README.vi.md](../../README.vi.md) — bản ngắn.
+- [extending.md](extending.md) — thêm skill hoặc playbook của bạn.
+- [../../README.md](../../README.md) — bản tóm tắt.

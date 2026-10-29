@@ -31,8 +31,8 @@ installing or extending stack-agents. Fixes to prose alone need neither.
 ## Documentation
 
 English is canonical (`docs/en/`). Keep `docs/vi/` in step: same filenames,
-same headings. `scripts/test.sh` fails when either side is missing a file or
-drifts in heading count.
+same headings. A bilingual parity test fails when either side is missing a
+file or drifts in heading count.
 
 ## Checklist before a pull request
 

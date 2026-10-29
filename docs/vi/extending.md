@@ -2,73 +2,85 @@
 
 > English: [docs/en/extending.md](../../docs/en/extending.md)
 
-## Thêm một kỹ năng
+## Thêm một skill
 
-1. Tạo `.ai/skills/<tên>.md`. Tên chỉ được chứa chữ thường, chữ số và dấu gạch
-   ngang — `load_skill` từ chối mọi thứ khác.
-2. Thêm một dòng vào bảng kỹ năng trong `AGENTS.md`, ánh xạ lệnh sang file và
-   nói khi nào dùng nó.
-3. Chạy `bash scripts/sync.sh` để các file quy tắc đã sinh nhận bảng mới.
+1. Tạo `.ai/skills/<name>.md`. Tên chỉ chứa chữ thường, chữ số và gạch nối —
+   `load_skill` từ chối mọi thứ khác.
+2. Thêm một dòng vào bảng skill trong `AGENTS.md`, ánh xạ lệnh sang file và
+   nêu khi nào dùng nó.
+3. Chạy `stack sync` để các file render và link nhặt được bảng mới.
 
-Hết. Kỹ năng giờ có mặt dưới dạng `/<tên>` ở mọi công cụ, và qua
-`load_skill("<tên>")` trong agent tự viết.
+Chỉ vậy thôi. Skill giờ khả dụng dạng `/<name>` trong mọi tool, và qua
+`load_skill("<name>")` trong custom agent.
 
-Viết file kỹ năng theo đúng cách các file đang có được viết: tiêu đề ngắn, khi
-nào dùng, các bước, và kết quả. Giữ nó nói về quy trình, không nói về một dự án
+Viết chính file skill theo cách các file hiện tại được viết: tiêu đề ngắn, khi
+nào dùng, các bước, và nó tạo ra cái gì. Giữ về quy trình, không về một project
 cụ thể.
 
 ## Thêm một playbook
 
-Cùng hình dạng, đặt trong `.ai/playbooks/`. Thêm tên đó vào dòng `/auto` trong
-`AGENTS.md` để mô hình biết nó tồn tại, rồi chạy `sync.sh`.
+Cùng dáng, trong `.ai/playbooks/`. Thêm tên vào dòng `/auto` trong `AGENTS.md`
+để model biết nó tồn tại, rồi chạy `stack sync`.
+
+## Thêm một agent
+
+Một dòng trong `internal/agents/agents.go` — ID, tên hiển thị, kind
+(symlink, bản copy banner, hoặc direct như OpenCode đọc trực tiếp
+`AGENTS.md`), file được sinh tới nơi nào trong `.agents/`, và đường dẫn cố
+định tool đọc. Tín hiệu detection nằm cạnh registry trong
+`internal/detect/detect.go`; thêm probe agent cần — binary trên PATH, một thư
+mục đánh dấu dưới `$HOME`, hoặc một VS Code extension đã cài. Commit cùng
+`stack sync --all` để file và link sinh ra của agent mới xuất hiện trong cùng
+một commit; `make check` xác nhận cả hai.
 
 ## Giữ `AGENTS.md` ngắn
 
-`AGENTS.md` nằm trong cửa sổ ngữ cảnh ở mọi yêu cầu. Thứ gì dài hơn vài dòng nên
-đặt trong `.ai/` và chỉ được nạp khi cần. Bảng kỹ năng là cỡ phù hợp cho
-`AGENTS.md`; các bước của kỹ năng thì không.
+`AGENTS.md` nằm trong context window cho mỗi request. Bất kỳ thứ gì dài hơn
+vài dòng nên nằm trong `.ai/` và chỉ load khi cần. Bảng skill là cỡ đúng cho
+`AGENTS.md`; các bước của skill thì không.
 
-Quy tắc ngón tay: nếu nội dung chỉ quan trọng khi một lệnh được gọi, nó thuộc về
-file mà lệnh đó nạp.
+Quy tắc ngón tay cái: nếu đoạn văn chỉ quan trọng khi một lệnh được gọi, nó
+thuộc về file mà lệnh đó load.
 
-## Kiểm chứng thay đổi của bạn
+## Xác minh thay đổi
 
 ```bash
 make check
 ```
 
-Lệnh này chạy `scripts/sync.sh --check` và `scripts/test.sh`. Bộ test kiểm tra
-`install.sh`, `sync.sh`, CLI của `load_skill.py`, việc mọi liên kết tương đối
-trong tài liệu đều tồn tại, và việc `docs/en` cùng `docs/vi` không bị lệch. Nếu
-bạn thêm kỹ năng, xác nhận nó xuất hiện:
+Lệnh này chạy gofmt, `go vet`, `go test ./...` (bao gồm link và parity
+kiểm tra tài liệu, phát hiện drift, hành vi install và uninstall, test
+subprocess của CLI, và CLI của `load_skill.py`) và cuối cùng là `stack check`.
+Nếu bạn thêm skill, xác nhận nó xuất hiện:
 
 ```bash
 python3 -I scripts/load_skill.py list
 ```
 
-## Giữ hai bản dịch khớp nhau
+## Giữ hai bản dịch cùng bước
 
-Tài liệu tồn tại hai lần — `docs/en/` và `docs/vi/`, với tên file giống hệt nhau.
-Nếu bạn sửa một bên, sửa luôn bên kia trong cùng một lần commit. `scripts/test.sh`
-sẽ fail khi một file chỉ có ở một bên, hoặc khi hai bản của cùng một file có số
-tiêu đề khác nhau — cả hai đều là dấu hiệu bản dịch bị bỏ quên. Chỉ văn bản đã
-cũ mà cấu trúc không đổi mới lọt lưới, nên hãy coi hai file là một thay đổi.
+Tài liệu tồn tại hai lần — `docs/en/` và `docs/vi/`, đặt trùng tên file. Nếu
+bạn đổi một bên, đổi bên còn lại trong cùng commit. Test parity song ngữ
+thoát lỗi khi file chỉ tồn tại một bên, hoặc hai phiên bản của một file mang
+số lượng heading khác nhau — hai dấu hiệu của bản dịch bị bỏ lại. Chỉ văn
+bản lỗi thời trượt qua, nên coi hai file là một thay đổi.
 
-`AGENTS.md` và `.ai/` cố ý chỉ có tiếng Anh: chúng được nạp vào ngữ cảnh của mô
-hình ở mọi phiên, và một bản thứ hai sẽ nhân đôi chi phí đó.
+`AGENTS.md` và `.ai/` cố ý chỉ dùng tiếng Anh: chúng được load vào context của
+model mỗi phiên, và một bản copy thứ hai sẽ gấp đôi chi phí đó.
 
 ## Đóng góp
 
-Checklist đầy đủ nằm trong [../../CONTRIBUTING.md](../../CONTRIBUTING.md).
-Riêng phần mở rộng:
+Checklist đầy đủ nằm ở [../../CONTRIBUTING.md](../../CONTRIBUTING.md).
+Riêng cho việc mở rộng:
 
-1. `make check` phải pass.
-2. `AGENTS.md` và các file sinh ra phải khớp — nếu không, CI sẽ fail.
-3. Kỹ năng mới phải được đăng ký trong bảng ở `AGENTS.md`.
-4. Mọi thay đổi tài liệu phải có đủ cả hai bản ngôn ngữ.
+1. `make check` pass.
+2. `AGENTS.md` và các file sinh ra in cùng bước — CI thất bại nếu ngược lại.
+3. Skill mới được đăng ký trong bảng `AGENTS.md`.
+4. Cả hai phiên bản ngôn ngữ của mọi thay đổi tài liệu đều có.
 
-## Tiếp theo
+## Kế tiếp
 
-- [skills.md](skills.md) — các kỹ năng đang có, làm mẫu để theo.
-- [how-it-works.md](how-it-works.md) — vì sao ranh giới được vẽ như vậy.
-- [../../README.vi.md](../../README.vi.md) — bản ngắn.
+- [skills.md](skills.md) — các skill hiện có, làm mẫu để bắt chước.
+- [how-it-works.md](how-it-works.md) — vì sao ranh giới được vẽ thế này.
+- [cli.md](cli.md) — các lệnh mà phần kiểm chứng xoay quanh.
+- [../../README.md](../../README.md) — bản tóm tắt.
