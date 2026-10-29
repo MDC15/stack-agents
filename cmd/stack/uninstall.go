@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/MDC15/stack-agents/internal/project"
 	"github.com/MDC15/stack-agents/internal/ui"
 )
 
@@ -19,7 +20,7 @@ func runUninstall() error {
 		return err
 	}
 
-	p, err := openProject(path)
+	p, err := project.Open(path)
 	if err != nil {
 		return err
 	}

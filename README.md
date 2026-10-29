@@ -89,16 +89,21 @@ A `--force` update merges the new `AGENTS.md` over yours while keeping your
 Real output, on a machine with OpenCode installed:
 
 ```
-╭──────────────┬─────────────────┬─────────────────╮
-│ AGENT        │ VERSION         │ STATUS          │
-├──────────────┼─────────────────┼─────────────────┤
-│ Claude Code  │ —               │ ✓ link          │
-│ OpenCode     │ opencode v2.0.2 │ ✓ reads AGENTS. │
-...
-╰──────────────┴─────────────────┴─────────────────╯
-created .agents/claude.md
-linked CLAUDE.md -> .agents/claude.md
-...
+╭──────────────┬─────────────────┬─────────────────┬───────────────────────────────╮
+│AGENT         │VERSION         │STATUS           │TARGET                         │
+├──────────────┼─────────────────┼─────────────────┼───────────────────────────────┤
+│Claude Code   │—               │✓ link           │CLAUDE.md                      │
+│OpenCode      │opencode v2.0.20│✓ reads AGENTS.md│                               │
+│Codex         │—               │✓ reads AGENTS.md│                               │
+│Cursor        │—               │✓ link           │.cursor/rules/stack-agents.mdc │
+│GitHub Copilot│—               │✗ skip           │.github/copilot-instructions.md│
+│Cline         │—               │✓ link           │.clinerules                    │
+│Roo Code      │—               │✗ skip           │.roorules                      │
+│Windsurf      │—               │✗ skip           │.windsurfrules                 │
+╰──────────────┴─────────────────┴─────────────────┴───────────────────────────────╯
+AGENTS.md
+.ai/playbooks/debug.md
+... (one line per created file, then the links)
 Next: edit AGENTS.md, then run `stack sync --path .`
 ```
 

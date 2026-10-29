@@ -45,6 +45,8 @@ func runStatus() error {
 			row.Status = "✓ ok"
 		case driftAt[a.Link] != "":
 			row.Status = "✗ " + driftAt[a.Link] + " (" + a.Link + ")"
+		case a.File != "" && driftAt[a.File] != "":
+			row.Status = "✗ " + driftAt[a.File] + " (" + a.File + ")"
 		case linkExists(a.Link):
 			row.Status = "✓ ok"
 		case found[a.ID]:

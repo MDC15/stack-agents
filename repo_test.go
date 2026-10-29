@@ -9,24 +9,6 @@ import (
 	"testing"
 )
 
-// docFiles arms both documentation checks: every file a link check
-// walks, and the bilingual parity pair.
-var docFiles = []string{
-	"README.md",
-	"README.vi.md",
-	"CONTRIBUTING.md",
-	"docs/en/custom-agents.md",
-	"docs/en/extending.md",
-	"docs/en/getting-started.md",
-	"docs/en/how-it-works.md",
-	"docs/en/skills.md",
-	"docs/vi/custom-agents.md",
-	"docs/vi/extending.md",
-	"docs/vi/getting-started.md",
-	"docs/vi/how-it-works.md",
-	"docs/vi/skills.md",
-}
-
 // linkPattern matches markdown link targets inside (…).
 var linkPattern = regexp.MustCompile(`\]\(([^)(]+)\)`)
 
@@ -76,12 +58,23 @@ func linksIn(t *testing.T, path string) []string {
 }
 
 // TestLinkIntegrity walks every markdown page and asserts each relative
-// link target exists next to the file that mentions it.
+// link target exists next to the file that mentions it. The page list is
+// enumerated from disk — never hardcoded, or a new page would ship
+// unaccounted for.
 func TestLinkIntegrity(t *testing.T) {
 	if _, err := os.Stat("docs"); os.IsNotExist(err) {
 		t.Skip("documentation not present (installed project), skipping")
 	}
-	for _, path := range docFiles {
+	pages := []string{"README.md", "README.vi.md", "CONTRIBUTING.md"}
+	for _, dir := range []string{"docs/en", "docs/vi"} {
+		for _, name := range docsDir(dir) {
+			pages = append(pages, filepath.Join(dir, name))
+		}
+	}
+	if !slicesContains(pages, filepath.Join("docs", "en", "cli.md")) {
+		t.Errorf("cli.md missing from the enumerated pages; link integrity no longer covers it")
+	}
+	for _, path := range pages {
 		dir := filepath.Dir(path)
 		for _, target := range linksIn(t, path) {
 			file := target
@@ -102,27 +95,112 @@ func TestLinkIntegrity(t *testing.T) {
 var headingPattern = regexp.MustCompile(`(?m)^#`)
 
 // TestBilingualParity asserts the Vietnamese mirrors keep the same
-// filenames and heading counts as docs/en.
+// filenames and heading counts as docs/en, by enumerating both
+// directories — never a hardcoded page list, or a new page would ship
+// without its translation.
 func TestBilingualParity(t *testing.T) {
 	if _, err := os.Stat("docs"); os.IsNotExist(err) {
 		t.Skip("documentation not present (installed project), skipping")
 	}
-	for _, en := range []string{"custom-agents.md", "extending.md", "getting-started.md", "how-it-works.md", "skills.md"} {
-		viPath := filepath.Join("docs/vi", en)
-		enPath := filepath.Join("docs/en", en)
-		enBody, err := os.ReadFile(enPath)
-		if err != nil {
-			t.Fatalf("reading %s: %v", enPath, err)
-		}
-		viBody, err := os.ReadFile(viPath)
-		if err != nil {
-			t.Errorf("docs/vi lacks %s", en)
-			continue
-		}
-		if got := len(headingPattern.FindAll(viBody, -1)); got != len(headingPattern.FindAll(enBody, -1)) {
-			t.Errorf("%s has %d headings, %s has %d", viPath, got, enPath, len(headingPattern.FindAll(enBody, -1)))
+	en, vi := docsDir("docs/en"), docsDir("docs/vi")
+	for _, fault := range missingMirrors(en, vi) {
+		t.Errorf("%s", fault)
+	}
+	for _, name := range []string{"cli.md", "getting-started.md"} { // canaries: must be seen
+		if !slicesContains(en, name) || !slicesContains(vi, name) {
+			t.Errorf("%s not present in both docs/ trees, the enumeration misses it", name)
 		}
 	}
+	for _, name := range intersect(en, vi) {
+		enBody, _ := os.ReadFile(filepath.Join("docs/en", name))
+		viBody, _ := os.ReadFile(filepath.Join("docs/vi", name))
+		if got := len(headingPattern.FindAll(viBody, -1)); got != len(headingPattern.FindAll(enBody, -1)) {
+			t.Errorf("docs/vi/%s has %d headings, docs/en/%s has %d", name, got, name, len(headingPattern.FindAll(enBody, -1)))
+		}
+	}
+}
+
+// docsDir lists the markdown files in dir, sorted.
+func docsDir(dir string) []string {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	names := []string{}
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") {
+			names = append(names, e.Name())
+		}
+	}
+	return names
+}
+
+// missingMirrors reports the fault lines: names present in en but absent
+// from vi, and vice versa.
+func missingMirrors(en, vi []string) []string {
+	var faults []string
+	for _, name := range en {
+		if !slicesContains(vi, name) {
+			faults = append(faults, "docs/vi lacks "+name)
+		}
+	}
+	for _, name := range vi {
+		if !slicesContains(en, name) {
+			faults = append(faults, "docs/en lacks "+name)
+		}
+	}
+	return faults
+}
+
+// TestMissingMirrors pins the fault finder the parity test rides on.
+func TestMissingMirrors(t *testing.T) {
+	if got := missingMirrors([]string{"a.md", "b.md"}, []string{"b.md"}); !slicesEqual(got, []string{"docs/vi lacks a.md"}) {
+		t.Errorf("missingMirrors = %v, want [docs/vi lacks a.md]", got)
+	}
+	if got := missingMirrors([]string{"a.md", "b.md"}, []string{"b.md", "a.md"}); len(got) > 0 {
+		t.Errorf("missingMirrors = %v, want none", got)
+	}
+	if got := missingMirrors([]string{"b.md"}, []string{"b.md", "stray.md"}); !slicesEqual(got, []string{"docs/en lacks stray.md"}) {
+		t.Errorf("missingMirrors = %v, want [docs/en lacks stray.md]", got)
+	}
+}
+
+// slicesEqual reports whether two string slices are equal.
+func slicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// intersect returns the names sorted in both lists.
+func intersect(a, b []string) []string {
+	bset := make(map[string]bool, len(b))
+	for _, n := range b {
+		bset[n] = true
+	}
+	out := []string{}
+	for _, n := range a {
+		if bset[n] {
+			out = append(out, n)
+		}
+	}
+	return out
+}
+
+// slicesContains reports whether s contains v.
+func slicesContains(s []string, v string) bool {
+	for _, n := range s {
+		if n == v {
+			return true
+		}
+	}
+	return false
 }
 
 // loaderSkillNames is the shipped skill set the loader must list.

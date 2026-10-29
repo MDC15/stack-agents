@@ -142,6 +142,69 @@ func TestStatusListsAllAgents(t *testing.T) {
 	}
 }
 
+// TestStatusShowsFileDrift: after AGENTS.md is edited, status must stop
+// saying ok for the stale agent — status is the health gauge users look
+// at, check is what CI runs.
+func TestStatusShowsFileDrift(t *testing.T) {
+	path := runScratch(t)
+	if code, out := run(t, "init", "--path", path, "--yes", "--agents", "claude"); code != 0 {
+		t.Fatalf("init: exit %d (%s)", code, out)
+	}
+	f, err := os.OpenFile(filepath.Join(path, "AGENTS.md"), os.O_APPEND|os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatalf("open AGENTS.md: %v", err)
+	}
+	if _, err := f.WriteString("\nstack: drift proof\n"); err != nil {
+		t.Fatalf("append AGENTS.md: %v", err)
+	}
+	f.Close()
+	code, out := run(t, "status", "--path", path)
+	if code != 0 {
+		t.Fatalf("status: exit %d (%s)", code, out)
+	}
+	if !strings.Contains(out, ".agents/claude.md") {
+		t.Errorf("status output %q does not name the stale .agents/claude.md", out)
+	}
+	if strings.Contains(out, "✓ ok\n") && !strings.Contains(out, "drift") {
+		t.Errorf("status output %q still reports ok rows while drift exists", out)
+	}
+}
+
+// TestUninstallRefusesWithoutConfirmation: when the prompt cannot run
+// (no terminal attached), uninstall must abort, not assume yes.
+func TestUninstallRefusesWithoutConfirmation(t *testing.T) {
+	path := runScratch(t)
+	if code, out := run(t, "init", "--path", path, "--yes", "--agents", "claude"); code != 0 {
+		t.Fatalf("init: exit %d (%s)", code, out)
+	}
+	code, out := run(t, "uninstall", "--path", path)
+	if code != 1 {
+		t.Fatalf("uninstall without --yes in a non-tty: exit %d, want 1 (%s)", code, out)
+	}
+	if _, err := os.Stat(filepath.Join(path, ".agents")); err != nil {
+		t.Errorf(".agents should survive a refused uninstall: %v", err)
+	}
+}
+
+// TestUninstallWithoutAGENTS: a broken install (AGENTS.md deleted by
+// hand) can still be uninstalled; the remedy must not be "run init".
+func TestUninstallWithoutAGENTS(t *testing.T) {
+	path := runScratch(t)
+	if code, out := run(t, "init", "--path", path, "--yes", "--agents", "claude"); code != 0 {
+		t.Fatalf("init: exit %d (%s)", code, out)
+	}
+	if err := os.Remove(filepath.Join(path, "AGENTS.md")); err != nil {
+		t.Fatalf("removing AGENTS.md: %v", err)
+	}
+	code, out := run(t, "uninstall", "--path", path, "--yes")
+	if code != 0 {
+		t.Fatalf("uninstall without AGENTS.md: exit %d, want 0 (%s)", code, out)
+	}
+	if _, err := os.Stat(filepath.Join(path, ".agents")); !os.IsNotExist(err) {
+		t.Errorf(".agents should be gone: %v", err)
+	}
+}
+
 // TestInitNoDetection: with no --agents and no detected agents, init still
 // succeeds but creates no fixed-path files.
 func TestInitNoDetection(t *testing.T) {

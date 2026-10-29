@@ -19,18 +19,18 @@ stack init --path /path/to/your-project
 Kết quả là bảng tám agent được tìm thấy hoặc bỏ qua trên máy này.
 
 ```
-╭──────────────┬─────────────────┬─────────────────╮
-│ AGENT        │ VERSION         │ STATUS          │
-├──────────────┼─────────────────┼─────────────────┤
-│ Claude Code  │ —               │ ✓ link          │
-│ OpenCode     │ opencode v2.0.2 │ ✓ reads AGENTS. │
-│ Codex        │ —               │ ✗ skip          │
-│ Cursor       │ —               │ ✗ skip          │
-│ GitHub Copilot│ —              │ ✓ link          │
-│ Cline        │ —               │ ✗ skip          │
-│ Roo Code     │ —               │ ✗ skip          │
-│ Windsurf     │ —               │ ✗ skip          │
-╰──────────────┴─────────────────┴─────────────────╯
+╭──────────────┬─────────────────┬─────────────────┬───────────────────────────────╮
+│AGENT         │VERSION         │STATUS           │TARGET                         │
+├──────────────┼─────────────────┼─────────────────┼───────────────────────────────┤
+│Claude Code   │—               │✓ link           │CLAUDE.md                      │
+│OpenCode      │opencode v2.0.20│✓ reads AGENTS.md│                               │
+│Codex         │—               │✗ skip           │                               │
+│Cursor        │—               │✗ skip           │.cursor/rules/stack-agents.mdc │
+│GitHub Copilot│—               │✓ link           │.github/copilot-instructions.md│
+│Cline         │—               │✗ skip           │.clinerules                    │
+│Roo Code      │—               │✗ skip           │.roorules                      │
+│Windsurf      │—               │✗ skip           │.windsurfrules                 │
+╰──────────────┴─────────────────┴─────────────────┴───────────────────────────────╯
 ```
 
 Sau đó một lần xác nhận (`--yes` bỏ qua) và quá trình cài đặt: bộ ship được

@@ -37,15 +37,17 @@ func (m confirmModel) View() string {
 	return m.question + " [Y/n] "
 }
 
-// Confirm asks q and reports the answer, defaulting to yes. When the
-// prompt cannot run (no terminal attached), it prints why and answers
-// yes, so scripted callers see the same behavior as an Enter press.
+// Confirm asks q and reports the answer, defaulting to yes when the user
+// presses Enter, EOF being treated as the same input. When the prompt
+// cannot run (no terminal attached), it declines to assume an answer and
+// reports the problem; callers that need a scripted yes pass explicit
+// confirmation instead.
 func Confirm(q string, out io.Writer) (bool, error) {
 	m := &confirmModel{question: q, result: true}
 	p := tea.NewProgram(m, tea.WithOutput(out), tea.WithInput(os.Stdin))
 	if _, err := p.Run(); err != nil {
-		fmt.Fprintf(out, "%s [prompt unavailable: %v; assuming yes]\n", q, err)
-		return true, nil
+		fmt.Fprintf(out, "%s [prompt unavailable: %v; refusing to assume]\n", q, err)
+		return false, fmt.Errorf("no confirmation: %w", err)
 	}
 	return m.result, nil
 }
