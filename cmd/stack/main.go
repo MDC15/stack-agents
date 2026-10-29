@@ -3,16 +3,25 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/MDC15/stack-agents/internal/project"
 )
 
 // commands maps command names to their handlers.
 var commands = map[string]func() error{
 	"version":   runVersion,
 	"--version": runVersion,
+	"init":      runInit,
+	"status":    runStatus,
+	"sync":      runSync,
+	"check":     runCheck,
+	"uninstall": runUninstall,
 }
 
 func main() {
@@ -41,4 +50,24 @@ func usage() {
 	sort.Strings(names)
 	fmt.Fprintln(os.Stderr, "usage: stack <command> [args]")
 	fmt.Fprintln(os.Stderr, "commands:", strings.Join(names, ", "))
+}
+
+// flagSet builds a command's flag set with the shared --path flag.
+func flagSet(name string, path *string) *flag.FlagSet {
+	fs := flag.NewFlagSet(name, flag.ExitOnError)
+	fs.StringVar(path, "path", ".", "project directory")
+	return fs
+}
+
+// openProject opens path as a stack project, naming AGENTS.md in the
+// error when the project has not been initialized.
+func openProject(path string) (*project.Project, error) {
+	p, err := project.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	if _, statErr := os.Stat(filepath.Join(path, "AGENTS.md")); os.IsNotExist(statErr) {
+		return nil, fmt.Errorf("AGENTS.md: project is not initialized; run `stack init --path %s`", path)
+	}
+	return p, nil
 }

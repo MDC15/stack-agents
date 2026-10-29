@@ -34,10 +34,13 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// run executes the built binary and returns its exit code and combined output.
+// run executes the built binary and returns its exit code and combined
+// output. Every exec gets an empty PATH and a temp HOME so agent
+// detection finds nothing, whatever the test machine has installed.
 func run(t *testing.T, args ...string) (int, string) {
 	t.Helper()
 	cmd := exec.Command(binPath, args...)
+	cmd.Env = []string{"PATH=", "HOME=" + t.TempDir()}
 	var out strings.Builder
 	cmd.Stdout = &out
 	cmd.Stderr = &out
