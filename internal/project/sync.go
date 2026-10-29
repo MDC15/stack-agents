@@ -212,16 +212,29 @@ func render(a agents.Agent, body []byte) []byte {
 	return generate.Plain(body)
 }
 
-// hasBanner reports whether content carries the generated banner within
+// hasBanner reports whether content carries a stack-generated header in
 // its first 8 lines (the Cursor frontmatter pushes it down a few lines).
+// Both the Go renderer's banner and the scripts/sync.sh banner left by a
+// ≤0.2 install count as owned, so a first sync converts the old layout.
 func hasBanner(content []byte) bool {
+	banners := [][]byte{
+		[]byte(generate.Banner),
+		[]byte(legacyBanner),
+	}
 	for i, line := range bytes.Split(content, []byte("\n")) {
 		if i >= 8 {
 			break
 		}
-		if bytes.Contains(line, []byte(generate.Banner)) {
-			return true
+		for _, b := range banners {
+			if bytes.Contains(line, b) {
+				return true
+			}
 		}
 	}
 	return false
 }
+
+// legacyBanner is the file header scripts/sync.sh wrote before the Go
+// CLI existed. The exact-banner guarantee applies to what the renderer
+// writes, not to what sync adopts for migration.
+const legacyBanner = "<!-- Generated from AGENTS.md by scripts/sync.sh. Edit AGENTS.md, not this file. -->"

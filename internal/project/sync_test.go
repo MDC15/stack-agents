@@ -156,6 +156,27 @@ func TestSyncReplacesBannerCarryingLeftovers(t *testing.T) {
 	}
 }
 
+// TestSyncReplacesLegacyBannerLeftovers pins the ≤0.2 migration: a
+// banner file from the bash era is replaced by the managed link on the
+// first sync, not left as unmanaged.
+func TestSyncReplacesLegacyBannerLeftovers(t *testing.T) {
+	root := fixture(t)
+	leftover := legacyBanner + "\n\n# old layout rules\n"
+	if err := os.WriteFile(filepath.Join(root, "CLAUDE.md"), []byte(leftover), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	synced(t, root, map[string]bool{"claude": true})
+
+	got, err := os.Readlink(filepath.Join(root, "CLAUDE.md"))
+	if err != nil {
+		t.Fatalf("CLAUDE.md is not a symlink after Sync: %v", err)
+	}
+	if want := ".agents/claude.md"; got != want {
+		t.Errorf("CLAUDE.md target = %q, want %q", got, want)
+	}
+}
+
 func TestSyncFallbackCopyWhenSymlinkFails(t *testing.T) {
 	root := fixture(t)
 	original := Symlink

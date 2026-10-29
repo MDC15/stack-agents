@@ -1,34 +1,27 @@
 # stack-agents task runner.
-#   make                        show this help
-#   make check                  generated-file drift check, then the test suite
+#   make check                  format, vet, tests, then the drift check
 #   make sync                   regenerate the per-agent rule files from AGENTS.md
-#   make diff                   show what sync would change, without writing
+#   make diff                   show what the next sync would change
 #   make test                   run the test suite alone
-#   make install TARGET=<dir>   install into a project directory
+#
+# Install into other projects with `stack init --path <dir>`; there is
+# intentionally no make target for it.
 
-.PHONY: help check test sync diff install
+.PHONY: check test sync diff
 
-help:
-	@echo "stack-agents"
-	@echo "  make check                  check generated files, then run tests"
-	@echo "  make sync                   regenerate agent rule files from AGENTS.md"
-	@echo "  make diff                   show the difference for each stale file"
-	@echo "  make test                   run the test suite alone"
-	@echo "  make install TARGET=<dir>   install into a project directory"
+GO ?= go
 
 check:
-	@bash scripts/sync.sh --check
-	@bash scripts/test.sh
+	@bash -c 'test -z "$$($(GO)fmt -l .)"' || { echo "unformatted files:"; $(GO)fmt -l .; exit 1; }
+	@$(GO) vet ./...
+	@$(GO) test ./...
+	@$(GO) run ./cmd/stack check
 
 test:
-	@bash scripts/test.sh
+	@$(GO) test ./...
 
 sync:
-	@bash scripts/sync.sh
+	@$(GO) run ./cmd/stack sync --all
 
 diff:
-	@bash scripts/sync.sh --diff
-
-install:
-	@test -n "$(TARGET)" || { echo "usage: make install TARGET=/path/to/project"; exit 2; }
-	@bash scripts/install.sh "$(TARGET)"
+	@$(GO) run ./cmd/stack check --diff

@@ -3,3 +3,7 @@
 
 # Local git worktrees.
 .worktrees/
+
+# Built binaries.
+/stack
+/stack.exe

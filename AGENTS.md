@@ -46,6 +46,8 @@ Core engineering principles live in `.ai/principles.md`. Read it at the start of
 
 Repo-specific commands (build, test, lint) and conventions go below this line. They take priority over everything above except Hard rules.
 
-- Build: none (this repo is distributed as Markdown and scripts)
-- Test: `bash scripts/test.sh`
-- Lint/typecheck: `bash scripts/sync.sh --check`
+- Build: `go build ./cmd/stack`
+- Test: `go test ./...`
+- Lint/typecheck: `test -z "$(gofmt -l .)" && go vet ./...`
+
+Generated rule files come from AGENTS.md and are refreshed with `stack sync`.
